@@ -1,0 +1,65 @@
+# 行尾策略：多平台协作时防止「整文件 diff」噪音
+#
+# 背景：Windows 的 git 默认 core.autocrlf=true 会把检出的 LF 换成 CRLF，
+# 再提交时又转回 LF——但只要有一个队友的配置不同，同一份 .v 文件就会在
+# 仓库里出现「全部行都变了」的假 diff，评审时完全看不出真实改动。
+# 这里统一：**仓库内一律 LF**，二进制文件不做任何转换。
+
+# 默认：文本文件入库统一 LF
+* text=auto eol=lf
+
+# 硬件描述与脚本：强制 LF（TD/Quartus/ModelSim 都能正常读）
+*.v        text eol=lf
+*.sv       text eol=lf
+*.svh      text eol=lf
+*.vh       text eol=lf
+*.vhd      text eol=lf
+*.vhdl     text eol=lf
+*.tdf      text eol=lf
+*.xdc      text eol=lf
+*.sdc      text eol=lf
+*.qsf      text eol=lf
+*.qpf      text eol=lf
+*.f        text eol=lf
+*.do       text eol=lf
+*.tcl      text eol=lf
+*.py       text eol=lf
+*.mjs      text eol=lf
+*.js       text eol=lf
+*.ts       text eol=lf
+*.json     text eol=lf
+*.yml      text eol=lf
+*.yaml     text eol=lf
+*.md       text eol=lf
+*.txt      text eol=lf
+*.bat      text eol=crlf
+*.cmd      text eol=crlf
+*.ps1      text eol=crlf
+
+# 二进制：禁止任何转换与 diff
+*.bit      binary
+*.bin      binary
+*.rbf      binary
+*.fs       binary
+*.png      binary
+*.jpg      binary
+*.jpeg     binary
+*.gif      binary
+*.pdf      binary
+*.zip      binary
+*.7z       binary
+*.ppt      binary
+*.pptx     binary
+*.doc      binary
+*.docx     binary
+*.xls      binary
+*.xlsx     binary
+*.mp4      binary
+*.wav      binary
+*.db       binary
+*.qdb      binary
+*.wlf      binary
+
+# 语言统计：这些是生成/参考资料，不计入仓库语言占比
+docs/**     linguist-documentation
+assets/**   linguist-documentation
