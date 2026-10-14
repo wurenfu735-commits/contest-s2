@@ -1,0 +1,94 @@
+# ── 仿真/综合产物体积告警 ───────────────────────────────────────────────
+# 这个工程总计约 27.7 GB，但真正该进版本库的源码只有约 9 MB。
+# 下面第一条规则挡掉的 vsim.wlf 单文件就有 26.7 GB。
+# 千万别为了"图省事"删掉这些规则：仓库会瞬间膨胀到几十 GB，且 push 必然失败。
+
+# ── 仿真产物 ─────────────────────────────────────────────────────────
+*.wlf
+wlft*
+vsim.wlf
+transcript
+vsim_stacktrace.vstf
+*.vcd
+*.fsdb
+*.shm
+*.sav
+*.jou
+*.ucdb
+*.cov
+*.vstf
+work/
+__pycache__/
+*.pyc
+
+# ── 综合 / 布局布线产物（Tang Dynasty、Quartus 等）─────────────────────
+db/
+incremental_db/
+output_files/
+simulation/
+*_Runs/
+*.runs/
+greybox_tmp/
+hc_output/
+*.qdb
+*.qtl
+*.qpg
+*.qor
+*.area
+*.timing
+*.timingsummary
+*.ipc
+*.ts
+*.status
+*.cfg
+*.pin
+*.done
+*.sof
+*.pof
+*.rbf
+*.jic
+*.pld
+*.sld
+*.tdf
+*.tdr
+*.ttf
+
+# ── 位流：体积大且是"发布产物"，请走 GitHub Releases，不要塞进 git ──────
+# （bitbank/ 里的版本靠文件名区分，用 Release 附件 + tag 更合适）
+*.bit
+*.bin
+*.fs
+*.mcs
+*.prm
+
+# ── 日志 ────────────────────────────────────────────────────────────
+*.log
+*.logw
+*.rpt
+*.summary
+*_summary.txt
+
+# ── 编辑器 / 系统 ────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+*.bak
+*.tmp
+*.swp
+*~
+
+# ── 第三方与参考资料：不随本仓库分发 ────────────────────────────────
+# assets/ref_docs/guoyi_repo* 是他人开源作品（外部 2025 国一仓库）的副本，
+# 有独立来源与许可，重分发既不合规也没必要 —— 需要的人按 docs/05_开源调研.md
+# 里的 GitHub 地址自行获取。
+assets/ref_docs/guoyi_repo/
+assets/ref_docs/guoyi_repo.zip
+# 参考视频与音频（十余 MB 起），需要的人自行获取
+assets/ref_videos/
+assets/video_frames/
+assets/video_frames_v2/
+
+# ── 临时 ────────────────────────────────────────────────────────────
+*.tmp
+.idea/
+.vscode/
