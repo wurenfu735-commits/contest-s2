@@ -1,9 +1,13 @@
-# run_tb_96.ps1 —— v2 一键验证：edge_adaptive_96（并行版）vs Python 黄金模型
+# run_tb_96.ps1 —— v4 一键验证：edge_adaptive_96（并行版）vs Python 黄金模型
 #
 # 用法：pwsh -File src\p1_colorbar\tools\run_tb_96.ps1
 #
-# 判据：并行版输出 par_out.txt 与黄金模型 golden_out.txt（gen_golden_v2.py，与
-#       RTL 同锚点/同屏蔽/同迟滞顺序）逐像素一致 = PASS。
+# 判据：并行版输出 par_out.txt 与黄金模型 golden_out.txt（仓库顶层 tools\gen_golden_v4.py，
+#       与 RTL 同锚点/同屏蔽/同迟滞顺序）逐像素一致 = PASS。
+# 图案：每像素 ±3 确定性噪声（noisy = 灰度 + ((坐标函数)&7) - 3，即 -3..+4），与 tb、黄金模型同式。
+# 比对区：行 8..11 × 列 12..115 = 416 个像素（下面第 4 步 okf 的判据）。
+# 注意：第 3、4 步会覆写 sim\tb96\{par_out,seq_out,golden_out}.txt —— 这三个文件当前被版本库跟踪，
+#       跑完若内容有变会出现在 git status 里，提交前必须确认是不是"该提交的参考数据"。
 # 附带：参照版 edge_adaptive_pixel（RTL 第二形态）同 tb 仿真，仅作参考。
 $ErrorActionPreference = 'Stop'
 $MS   = "E:\app\Software\work\modelsim\win64"
@@ -62,7 +66,7 @@ def okf(p):
     return (8 <= r <= H-1) and (12 <= c <= 115)
 common = [p for p in sorted(par) if p in gol and okf(p)]
 err = sum(1 for p in common if par[p] != gol[p])
-print('  比对 %d 个像素（第 8 行起，含 ±3 传感器噪声图案（与黄金模型逐字同式））' % len(common))
+print('  比对 %d 个像素（行 8..11 × 列 12..115，图案含每像素 ±3 确定性噪声，与黄金模型逐字同式）' % len(common))
 print('  误差 %d 个（%.2f%% 正确）' % (err, 100.0*(len(common)-err)/max(1,len(common))))
 sys.exit(0 if err == 0 else 1)
 "@

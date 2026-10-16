@@ -1,12 +1,15 @@
-// tb_edge_adaptive_96 —— 96bit 并行版（v3）与 Python 黄金模型逐像素对比
+// tb_edge_adaptive_96 —— 96bit 并行版（v4：5×5 均值 + 分段 FLOOR）与 Python 黄金模型逐像素对比
 // ============================================================================
-// 验证方法：并行版输出 par_out.txt（带像素编号）；黄金模型在 tools/gen_golden_v3.py
+// 验证方法：并行版输出 par_out.txt（带像素编号）；黄金模型在仓库顶层 tools\gen_golden_v4.py
 //   （与 RTL 同锚点/同屏蔽/同迟滞顺序）生成 golden_out.txt；
-//   run_tb_96.ps1 逐像素比对，0 误差 = PASS。
+//   src\p1_colorbar\tools\run_tb_96.ps1 逐像素比对，0 误差 = PASS。
 // 同 tb 内的 edge_adaptive_pixel（逐像素 RTL 第二形态）只做编译/仿真烟雾，不参与判定。
 //
-// 图案：棋盘 + 低对比锯齿 + 中段高亮 + 每像素 ±8 确定性噪声（坑 40 教训）。
-// 高度 H=12：v3 行缓存冷启动 6 行 + row_ok>=8 后留 4 个可比行。
+// 本档参数：W=128、H=12、THR_FLOOR=11'd96（v4 基准地板，与上板 isp_top 一致）、I_k=2'd2、I_mode=2'd2。
+// 图案：棋盘 + 低对比锯齿 + 中段高亮 + 每像素 ±3 确定性噪声（noisy = 灰度 + ((坐标函数)&7) - 3，
+//   即 -3..+4，与黄金模型逐字同式；坑 40 教训）。
+// 高度 H=12：6 级下沉行缓存冷启动，row_ok = (y_d2 >= 8) 才出判决 → 可比行只有 y=8..11（4 行）。
+// 比对区：行 8..11 × 列 12..115 = 416 个像素（run_tb_96.ps1 第 4 步 okf 的判据）。
 `timescale 1ns/1ps
 module tb_edge_adaptive_96;
 
