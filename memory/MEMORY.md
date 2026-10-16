@@ -169,6 +169,12 @@
 - **视觉大模型**：DSH 本地 QWEN key（凭据 `D:\dsh-home\.credentials.yaml` → `refs.QWEN_TOKEN_PLAN_CN_API_KEY`，明文，长 115）可用：文本 `qwen-plus` / `qwen-max`；视觉 **`qwen3-vl-plus`**（`qwen-vl-max` 403、`qwen-vl-plus` 404 不可用）。端点 `https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions`。复用脚本：`src\p1_colorbar\tools\vlm_frames_probe.py`。
 - **视频理解插件** `dsh-video-understand 0.5.2`（pnpm 裸装于 `D:\dsh-home\profiles\desktop\node_modules\`，未按 D:\Plugins 规范）：引擎 `engine\understand_video.py`；前置 ffmpeg + faster-whisper + opencv（已装）；**Windows 必须设 `PYTHONIOENCODING=utf-8`**（否则 emoji 触发 GBK `UnicodeEncodeError` 崩溃）；缺的包按其 `engine\requirements.txt` 补（已知缺 xxhash）。
 - **控制台编码通用坑**：本机 Python/ModelSim 输出中文/emoji 都会撞 GBK → 统一 `PYTHONIOENCODING=utf-8` + `[Console]::OutputEncoding=UTF8`。
+- **★ git push/fetch 静默挂死（2026-10-17 推送 contest-s2 时定位，本机必踩）**：
+  - 症状：`git push origin main` **无任何输出**、240s 超时被杀（exit 124）；随后 `git fetch`、`git ls-remote` 同样挂死。误导项：`curl https://github.com` 报 schannel `CRYPT_E_NO_REVOCATION_CHECK`（看着像网络/TLS，其实不是）。
+  - 定位链：DNS/TCP443 正常 → `git -c credential.helper= ls-remote origin` **秒回 401**（证明网络 OK，且**该仓库是私有的、必须带凭据**）→ `GIT_TRACE=1` 显示卡在 `git credential-helper-selector get` → 手跑 `git-credential-manager.exe get` 秒回且有账号 `wurenfu735-commits`。
+  - 根因：**DSH 自带 bash 的 system 级 gitconfig**（`D:/dsh-home/dsh-ops/shells/bash/2.56.0.2/etc/gitconfig`）设了 `credential.helper=helper-selector`，排在用户级 `manager` 之前且在本环境**永久挂起**。
+  - **解法（不改任何配置，逐命令覆盖）**：`git -c credential.helper= -c credential.helper=manager push origin main`（空值先清空 helper 链，再只用 GCM）。fetch/ls-remote 同理。
+  - 备注：仓库 `wurenfu735-commits/contest-s2` 为**私有**；`.gitignore` 已挡住位流/视频/仿真产物（入库仅源码+文档，`.git` 约 17MB）。
 
 ## 十、路线调整（2026-10-14 重新对齐，长期有效）
 
