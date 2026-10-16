@@ -14,6 +14,11 @@
   python edge_adaptive.py --pattern colorbar          # 只跑彩条
   python edge_adaptive.py --pattern colorbar --k 3 --floor 24
   python edge_adaptive.py --all --ideal               # 额外输出"理想迟滞"版做对照
+
+口径说明（2026-10-17 标注）：本文件是 v1–v3 时期的黄金模型（3×3 均值、默认 FLOOR=16），
+已不在现行一键验证链路里（run_tb_96.ps1 走的是仓库顶层 tools/gen_golden_v4.py）；
+保留它是为了参数试跑与图案对照。现行 v4 口径（5×5 均值 + 分段 FLOOR，基准 96）
+以 tools/gen_golden_v4.py 与 src/p1_colorbar/rtl/edge_adaptive_96.v 为准。
 """
 
 import argparse
