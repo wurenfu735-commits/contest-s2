@@ -48,7 +48,7 @@
   `E:\fpga\contest_s2\src\p1_colorbar\OUR_project\hdmi_base_src\td_project\OUR_p1_colorbar.al`
   （外层 `OUR_project` / 内层 `hdmi_base_src` / 工程名及 Runs、sdc 均为 `OUR_p1_colorbar*`；原 `hdmi_base\lab_ex1_mipi_hdmi` + `camera_to_dsi_display.*` 已不存在）
   - 顶层 = `colorbar_top`；自研 rtl 在 `src\p1_colorbar\rtl\`（工程内相对路径 `../../../rtl/`）；约束 `../../../constraints/colorbar_top.adc`
-  - 改名前的 `.al`/`.sdc` 备份在 `D:\dsh-home\tmp\rename_backup\`；改名脚本留档 `src\p1_colorbar\tools\rename_project.ps1`
+  - 改名前的 `.al`/`.sdc` 备份在 `D:\dsh-home\tmp\rename_backup\`；改名脚本留档 `src\p1_colorbar\archive\oneoff_scripts\rename_project.ps1`
   - 官方原包（`HX1P35A_Contest_202606\...\lab_ex1_mipi_hdmi`）保持只读，仍是官方基线
 - **文档地图（2026-10-14 建立，2026-10-16 更新）**：总索引 = `docs\00_阅读指南.md`；活文档 = 01 赛题解读 / 02 文件存放规划 / 03 编译烧写速查 / 04 官方例程清单 / 05 开源调研 / 06 情报与呈现方案 / 07 执行路线图 / 08 算法规格_P2 / 09 问题总结_按键无响应 / 10 协作规范 / **11 复用与自研清单（答辩用）**；历史文档 = `docs\archive\`；原始备份 = `contest_s2\_backup_docs_20261014_2230\`
 - **src 目录规约（2026-10-14 建立，2026-10-16 重构）**：**`src\p1_colorbar\README.md` = 工程文件地图（唯一权威）**，含 30 秒速览 / 目录职责 / 最新版本判断依据 / 可随时删清单 / 旧版本三步处理；`bitbank\` 只留里程碑 bit，**现行版本看 `bitbank\位流台账.md` 的「★ 现行版本」行**（不看文件名）；tb 分 `unit\`（模块级）/ `integration\`（集成级）/ `gen\`（脚本自动生成，可删）三类，对照表在 `tb\README.md`

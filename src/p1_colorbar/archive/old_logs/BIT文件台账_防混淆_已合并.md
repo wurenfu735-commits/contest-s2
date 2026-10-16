@@ -20,7 +20,7 @@
 | `OUR_p1_colorbar_v1_20261014.bit` | 按键约束在**扩展口 N2/J14**（照抄官方 pin.adc）→ 板载 KEY 按不到 |
 | `OUR_p1_colorbar_v2_onboard_key.bit` | 按键已改板载，但**消抖计数器位宽不足**（16 位装不下 74249）→ 按键完全无响应 |
 
-详见 [`archive\README_旧版说明.md`](archive/README_旧版说明.md)（含问题原因与取舍记录）。
+详见 [`archive\README_旧版说明.md`](../README_旧版说明.md)（含问题原因与取舍记录）。
 
 ## ⚠️ 三、官方预制 bit（复制工程时带过来的，勿混淆）
 
