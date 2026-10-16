@@ -8,9 +8,9 @@
 | 文件 | 来源仓库 | 借鉴了什么（思路层面） |
 |---|---|---|
 | `conv2d.sv` | dannyboy1024/FPGA-streaming-line-buffer-based-2D-convolution-kernel | 部分和存 RAM、行内滑窗的"增量"思想（我们**未采用**其实现，仅评估） |
-| `sobel_convolution.v` | AngeloJacobo/FPGA_RealTime_and_Static_Sobel_Edge_Detection | separable 分离卷积（先横向一维和/差，再纵向组合）——与我们的 col3 列和 → 纵向组合同一思路 |
+| `sobel_convolution.v` | AngeloJacobo/FPGA_RealTime_and_Static_Sobel_Edge_Detection | separable 分离卷积（先横向一维和/差，再纵向组合）——与我们的 col5 列和 → 纵向组合同一思路 |
 
-## 采用情况（对照 v3 最终设计）
+## 采用情况（对照 v4 最终设计）
 
 - **采用**：separable 第一步（行内 5 列滑动和 → 纵向 5 行组合），这是公开的算子恒等式思路。
 - **未采用**：running sum 增量滑窗（资源不紧张，不引入更长的组合链）、部分和存 RAM（我们 4 像素并行取窗口，不适用串行滑窗模式）。

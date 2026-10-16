@@ -1,6 +1,6 @@
 # 工程文件地图（src\p1_colorbar）
 
-> 一份文档看懂全工程。**最后更新：2026-10-16**  
+> 一份文档看懂全工程。**最后更新：2026-10-17**  
 > 上级目录另有：`..\..\docs\`（文档）、`..\..\memory\`（记忆与进展）、`..\..\sim\`（仿真与验证）
 
 ## 一、30 秒速览：我要做什么，去哪
@@ -10,10 +10,10 @@
 | 看 / 改自研 RTL   | `rtl\`                                  | 7 个文件，见第三节                 |
 | **烧写**        | `bitbank\`                              | **只看这个目录**；台账里有验收清单        |
 | 跑测试           | `pwsh -File tools\run_tb.ps1 -Tb <名>`   | tb 对照表见 `tb\README.md`     |
-| 算法逐像素验证       | `..\..\sim\golden\verify_all.ps1`       | 一键四图，edge + mag 双指标        |
+| 算法逐像素验证       | `pwsh -File tools\run_tb_96.ps1`        | 一键：编译→仿真→生成 v4 黄金模型→逐像素比对，**PASS=0 误差**（黄金模型 = `..\..\tools\gen_golden_v4.py`） |
 | 编译结果判读        | `pwsh -File tools\check_build.ps1`      | bit 时间戳 / 资源 / 各时钟域时序 / 错误 |
 | TD 编译         | `OUR_project\hdmi_base_src\td_project\` | 打开 `.al`，**Reset 后 Run**   |
-| 查踩过的坑         | `..\..\memory\MEMORY.md`                | 28 条                       |
+| 查踩过的坑         | `..\..\memory\MEMORY.md`                | 41 条                       |
 | 查阶段进展         | `..\..\memory\PROGRESS.md`              | 含各阶段验收数据                   |
 | 分辨"复用什么、自研什么" | `..\..\docs\11_复用与自研清单.md`              | 答辩用                        |
 
@@ -38,9 +38,9 @@
 | `vtc_720p.v` | 720p 时序发生器（自研，未用官方 `uivtc`） | 上板 ✅ |
 | `test_pattern_gen.v` | 8 种测试图案 + 底部状态带 | 仿真 ✅ |
 | `debounce_btn.v` | 按键消抖 + 两级同步器 | 仿真 ✅ / 上板 ✅ |
-| **`edge_adaptive_96.v`** | **★ P2 主力**：96bit 并行（4 像素/拍）自适应阈值边缘检测，3 块行缓存 + 6 列共享窗口 + Sobel×4 + 因果迟滞×4 + 四态，AXI4-Stream，总延迟 3 拍 | **仿真 ✅ 与逐像素版误差 0 / 628 像素；综合 ripple 148 未被优化；已接入摄像头通路上板** |
-| `edge_adaptive_pixel.v` | 逐像素参照版（用于与 96bit 版逐像素比对） | 仿真 ✅ 4 图 × 919440 像素 0 误差 |
-| `edge_rgb_adapter.v` | 灰度化 + 四态选择 + 官方判决（复用同一 Sobel 前端） | 仿真 ✅ |
+| **`edge_adaptive_96.v`** | **★ v4 主算法**：96bit 并行（4 像素/拍）全分辨率自适应阈值边缘检测；6 块灰度行缓存 + 1 块判决行缓存、窗口 10 列×7 行、5×5 均值去噪 + 均值梯度、**分段 FLOOR 阈值**（暗192/中160/中高128/亮96 + 亮度项）、因果双阈值迟滞、四态输出；AXI4-Stream，总延迟 3 拍 | **仿真 ✅：`run_tb_96.ps1` PASS（0 误差，H=12 噪声图案）；综合实测（v4，2026-10-16 18:58 综合 / 19:01 P&R）：全设计 LUT 12187 / reg 14384 / RAMs 63 / DSP 8、时序 Setup WNS +0.376ns / 0 违规；ripple>0（v1 形态实测 148）；已接入摄像头通路上板：基本功能实现、残雪暂停完善（v4）** |
+| `edge_adaptive_pixel.v` | 逐像素参照版：**开发期参照（v2 形态：逐像素、3×3 均值），不与 v4 常量比对** | 仿真 ✅（v2/v3 时代：4 图 × 919440 像素 0 误差） |
+| `edge_rgb_adapter.v` | A2 TPG 通路：灰度化 + 四态选择 + 官方判决（例化逐像素参照版） | 仿真 ✅；**对应 A2 位流已过时（内含 v1 算法），待用 v4 算法重新综合** |
 
 > `edge_adaptive_96.v` 是通过 `isp_top.v` 例化接入 SC520 摄像头通路的（改动在 `OUR_project\...\hdl_source\isp\isp_top.v`）。
 > 接入过程与上板验收见 [`docs\12_阶段总结_摄像头版接入与上板验收.md`](../../docs/12_阶段总结_摄像头版接入与上板验收.md)。
@@ -72,7 +72,7 @@
 
 | 位置                                | 内容                                                      |
 | --------------------------------- | ------------------------------------------------------- |
-| `E:\fpga\contest_s2\docs\`        | 12 份文档（赛题解读 / 算法规格 / 复用与自研清单 …）+ `research\`（开源调研、过程保障） |
-| `E:\fpga\contest_s2\memory\`      | `MEMORY.md`（28 条坑）、`PROGRESS.md`（阶段进展）                  |
-| `E:\fpga\contest_s2\sim\golden\`  | Python 黄金模型 + 验证脚本 + 向量文件                               |
+| `E:\fpga\contest_s2\docs\`        | 13 份文档（00 阅读指南 → 12 阶段总结，赛题解读 / 算法规格 v4 / 复用与自研清单 …）+ `research\`（开源调研、过程保障） |
+| `E:\fpga\contest_s2\memory\`      | `MEMORY.md`（41 条坑）、`PROGRESS.md`（阶段进展）                  |
+| `E:\fpga\contest_s2\sim\golden\`  | v2/v3 时代黄金模型与验证脚本（**留档**；现行黄金模型 = `..\..\tools\gen_golden_v4.py`） |
 | `E:\fpga\HX1P35A_Contest_202606\` | **官方资料包（只读）**                                           |
