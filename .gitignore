@@ -20,6 +20,9 @@ vsim_stacktrace.vstf
 work/
 __pycache__/
 *.pyc
+# sim/tb96/ 是 run_tb_96.ps1 每次运行的中间产物（par_out/seq_out/golden_out.txt 等，
+# 随 RTL 改动而变），随时可由 tb 重新生成，不进库。
+sim/tb96/
 
 # ── 综合 / 布局布线产物（Tang Dynasty、Quartus 等）─────────────────────
 db/
@@ -92,3 +95,8 @@ assets/video_frames_v2/
 *.tmp
 .idea/
 .vscode/
+
+# ── TD（Tang Dynasty）本地锁文件 ────────────────────────────────────
+# td_project/.lock.f 是 TD 每次启动写的"上次用户/进程"记录（用户名 + PID + 工程绝对路径），
+# 本机状态，随机器和运行变化，进库只会制造无意义 diff。
+*.lock.f
