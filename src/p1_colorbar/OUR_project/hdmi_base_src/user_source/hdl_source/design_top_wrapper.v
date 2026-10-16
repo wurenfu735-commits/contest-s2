@@ -711,6 +711,8 @@ isp_top u_isp_top (
 .O_tlast         (S_ISP_O_tlast ),
 .O_tuser         (S_ISP_O_tuser ),
 .O_tvalid        (S_ISP_O_tvalid),
+.I_mode          (2'd2          ),   // 回到"我们的判决"（二分实验结束，通路已确认正常）
+.I_k             (2'd2          ),   // 灵敏度档 2（与仿真/黄金模型验证一致）
 .I_tready        ()
   );
 

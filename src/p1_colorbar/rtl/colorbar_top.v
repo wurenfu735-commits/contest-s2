@@ -1,10 +1,11 @@
-// P1 顶层：无摄像头测试图 + HDMI 显示
+// 顶层：测试图 + 边缘检测四态显示 + HDMI 输出
 // 时钟：板载 50M(C4) -> PLL 输出 74.25M(像素)、371.25M(串行)
-// 数据流：vtc_720p 产生行场时序 -> test_pattern_gen 生成图案
-//         -> hdmi_tx 的 RGB 时序接口（de/vs/data 直连）-> TMDS 差分输出
-// 按键：板载 KEY1(D5) 切换图案、KEY2(A9) 回到彩条（按下低电平）；背光(R11) 恒亮
-// LED：LED1/LED2 = KEY1/KEY2 按下指示（亮 0.2 秒）；LED3/LED4 = 当前图案编号（00彩条/01棋盘/10渐变/11灰阶）
-// hdmi_tx 来自官方例程（资质通路部件），音频/EDID 均不使用接 0
+// 数据流：vtc_720p 行场时序 -> test_pattern_gen 图案 -> edge_rgb_adapter（灰度+边缘检测）-> hdmi_tx -> TMDS
+//
+// 按键：KEY1(D5) 切图案（彩条/棋盘/渐变/灰阶）；KEY2(A9) 循环切显示模式
+//       模式：0=原图直通  1=官方判决(固定阈值80)  2=我们的判决(自适应阈值+迟滞)  3=左右分屏(左官方/右我们)
+// LED ：LED1/LED2 = KEY1/KEY2 按下指示（亮 0.2s）；LED3/LED4 = 当前显示模式编号
+// hdmi_tx 来自官方例程，音频/EDID 均不使用接 0
 module colorbar_top (
     input  wire       I_sys_clk,
     input  wire       I_rst_n,
@@ -22,11 +23,16 @@ module colorbar_top (
     wire        S_hdmi_serial_clk;
     wire        S_hsync, S_vsync, S_de;
     wire [11:0] S_hcnt, S_vcnt;
-    wire [23:0] S_rgb;
+    wire [23:0] S_rgb_tpg;
+    wire [23:0] S_rgb_out;
+    wire        S_out_de, S_out_vs;
     wire        S_btn0_press, S_btn1_press;
-    reg  [1:0]  S_pattern_sel;
+    reg  [2:0]  S_pattern_sel;        // 3 位：8 种图案
+    reg  [1:0]  S_disp_mode;          // 0=原图 1=官方判决 2=我们的判决 3=左右分屏
+    wire [1:0]  S_k_level;
 
     assign O_screen_pwm = 1'b1;
+    assign S_k_level    = 2'd2;       // 灵敏度档暂固定为 2，后续接按键在线调参
 
     // PLL：IP 生成件，50M 进，clk4=74.25M、clk5=371.25M；clk0/clk1 本设计不用
     PLL u_PLL(
@@ -52,16 +58,23 @@ module colorbar_top (
         .O_press ( S_btn1_press     )
     );
 
+    // KEY1 循环切图案（8 种，3 位自然回绕）
     always @(posedge S_hdmi_pixel_clk or negedge I_rst_n) begin
         if (!I_rst_n)
-            S_pattern_sel <= 2'd0;
-        else if (S_btn1_press)
-            S_pattern_sel <= 2'd0;
+            S_pattern_sel <= 3'd0;
         else if (S_btn0_press)
             S_pattern_sel <= S_pattern_sel + 1'd1;
     end
 
-    // 按键与图案状态指示：按 KEY 时对应 LED 亮 0.2s，用于确认"芯片有没有收到按键"
+    // KEY2 循环切显示模式
+    always @(posedge S_hdmi_pixel_clk or negedge I_rst_n) begin
+        if (!I_rst_n)
+            S_disp_mode <= 2'd0;              // 上电默认显示原图
+        else if (S_btn1_press)
+            S_disp_mode <= S_disp_mode + 1'd1;
+    end
+
+    // 按键指示：按下时对应 LED 亮 0.2s
     localparam LED_HOLD = 24'd14_850_000;      // 0.2s @ 74.25MHz
     reg [23:0] S_led0_cnt;
     reg [23:0] S_led1_cnt;
@@ -81,8 +94,8 @@ module colorbar_top (
 
     assign O_led[0] = (S_led0_cnt != 24'd0);
     assign O_led[1] = (S_led1_cnt != 24'd0);
-    assign O_led[2] = S_pattern_sel[1];
-    assign O_led[3] = S_pattern_sel[0];
+    assign O_led[2] = S_disp_mode[1];          // 显示模式编号（00原图/01官方/10我们/11分屏）
+    assign O_led[3] = S_disp_mode[0];
 
     vtc_720p u_vtc(
         .I_clk    ( S_hdmi_pixel_clk ),
@@ -102,7 +115,23 @@ module colorbar_top (
         .I_vcnt        ( S_vcnt           ),
         .I_pattern_sel ( S_pattern_sel    ),
         .I_pll_lock    ( S_pll_lock       ),
-        .O_rgb         ( S_rgb            )
+        .O_rgb         ( S_rgb_tpg        )
+    );
+
+    edge_rgb_adapter #(
+        .IMG_WIDTH (1280)
+    ) u_edge_adapter (
+        .I_clk   ( S_hdmi_pixel_clk ),
+        .I_rst_n ( I_rst_n          ),
+        .I_de    ( S_de             ),
+        .I_vs    ( S_vsync          ),
+        .I_hcnt  ( S_hcnt           ),
+        .I_rgb   ( S_rgb_tpg        ),
+        .I_mode  ( S_disp_mode      ),
+        .I_k     ( S_k_level        ),
+        .O_de    ( S_out_de         ),
+        .O_vs    ( S_out_vs         ),
+        .O_rgb   ( S_rgb_out        )
     );
 
     hdmi_tx u_hdmi_tx(
@@ -114,13 +143,13 @@ module colorbar_top (
         .O_edid_read_valid  (                   ),
         .O_edid_read_data   (                   ),
         .I_video_rgb_enable ( 1'b1              ),
-        .I_video_in_vs      ( S_vsync           ),
-        .I_video_in_de      ( S_de              ),
+        .I_video_in_vs      ( S_out_vs          ),
+        .I_video_in_de      ( S_out_de          ),
         .I_video_in_user    ( 1'b0              ),
         .I_video_in_valid   ( 1'b0              ),
         .I_video_in_last    ( 1'b0              ),
         .O_video_in_ready   (                   ),
-        .I_video_in_data    ( S_rgb             ),
+        .I_video_in_data    ( S_rgb_out         ),
         .I_audio_valid      ( 1'b0              ),
         .I_audio_left_data  ( 24'd0             ),
         .I_audio_right_data ( 24'd0             ),

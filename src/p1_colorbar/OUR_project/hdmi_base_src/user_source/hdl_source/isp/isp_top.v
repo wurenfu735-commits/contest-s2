@@ -7,6 +7,8 @@ module isp_top (
     input 			I_tvalid		,
     input [9:0] 	I_tdest			,
     input 			O_tready		,
+    input [1:0] 	I_mode			,   // 边缘判决四态：0原图 1官方 2我们 3左右分屏
+    input [1:0] 	I_k				,   // 自适应阈值灵敏度档 0..3
     output [127:0] 	O_tdata			,
     output 			O_tlast			,
     output 			O_tuser			,
@@ -33,7 +35,15 @@ wire         m_aixs_tvalid;  //synthesis keep
   wire         awb_O_tvalid_128;  //synthesis keep 
   wire [127:0] awb_O_tdata_128;  //synthesis keep 
 
-  assign awb_O_tready = O_tready;
+  // ===== 自研：自适应阈值边缘检测（4 像素/拍，全分辨率，因果双阈值迟滞）=====
+  wire         edge_O_tlast;  //synthesis keep
+  wire         edge_O_tuser;  //synthesis keep
+  wire [ 95:0] edge_O_tdata;  //synthesis keep
+  wire         edge_O_tvalid; //synthesis keep
+  wire         edge_O_tready; //synthesis keep
+
+  assign awb_O_tready = edge_O_tready;
+  assign edge_O_tready = O_tready;
   assign O_tdata  = awb_O_tdata_128;
   assign O_tlast  = awb_O_tlast    ;
   assign O_tuser  = awb_O_tuser_128    ;
@@ -92,13 +102,41 @@ awb #(
     .O_tready(awb_O_tready)
 );
 
+  // 自研算法插在 awb 与 data_96bit_to_128bit 之间（与官方 lab_ex2 的 edge_detect_96 同位置）
+  edge_adaptive_96 #(
+      .IMG_WIDTH  (1280),
+      .IMG_HEIGHT (720),
+      .THR_FLOOR  (11'd96)    // v4 分段地板基准：暗/中/亮 = 192/160/128/96（与黄金模型一致）
+  ) u_edge_adaptive_96 (
+      .I_clk   (axi4s_video_aclk),
+      .I_rst_n (I_rst_n),
+      .I_mode  (I_mode),     // 四态（顶层传入，当前先接固定值）
+      .I_k     (I_k),        // 灵敏度档
+      .I_tlast (awb_O_tlast),
+      .I_tuser (awb_O_tuser),
+      .I_tdata (awb_O_tdata),
+      .I_tvalid(awb_O_tvalid),
+      .I_tready(awb_O_tready),
+      .O_tlast (edge_O_tlast),
+      .O_tuser (edge_O_tuser),
+      .O_tdata (edge_O_tdata),
+      .O_tvalid(edge_O_tvalid),
+      .O_tready(edge_O_tready)
+  );
+
+    // 态 0（原图直通）用 awb 的原始 96bit；态 1/2/3（官方/我们/分屏）用算法输出。
+  // 算法模块在态 0 时仍在跑，只是输出不被选用；切换瞬间两者相位差 3 拍，几毫秒，可接受。
+  wire         S_disp_tuser  = (I_mode == 2'd0) ? awb_O_tuser : edge_O_tuser;  //synthesis keep
+  wire         S_disp_tvalid = (I_mode == 2'd0) ? awb_O_tvalid: edge_O_tvalid; //synthesis keep
+  wire [ 95:0] S_disp_tdata  = (I_mode == 2'd0) ? awb_O_tdata : edge_O_tdata;  //synthesis keep
+
     data_96bit_to_128bit u_data_96bit_to_128bit(
         .I_clk              ( axi4s_video_aclk  ),
         .I_rst_n            ( I_rst_n           ),
 	
-        .I_96b_frame_start  ( awb_O_tuser       ),
-        .I_96b_valid        ( awb_O_tvalid      ),
-        .I_96b_data         ( awb_O_tdata       ),
+        .I_96b_frame_start  ( S_disp_tuser      ),
+        .I_96b_valid        ( S_disp_tvalid     ),
+        .I_96b_data         ( S_disp_tdata      ),
 	
         .O_128b_frame_start ( awb_O_tuser_128  	),
         .O_128b_valid       ( awb_O_tvalid_128 	),

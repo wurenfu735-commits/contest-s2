@@ -80,8 +80,14 @@ def to_gray(rgb: np.ndarray) -> np.ndarray:
 
 
 def sobel_and_mean(gray: np.ndarray):
-    """3×3 Sobel 梯度 |Gx|+|Gy| 与 3×3 邻域和（边缘像素补 0，与 RTL 一致）"""
-    p = np.pad(gray.astype(np.int32), 1, mode="constant", constant_values=0)
+    """3×3 Sobel 梯度 |Gx|+|Gy| 与 3×3 邻域和。
+
+    窗口的垂直顺序与 RTL 的流式时间顺序严格一致：
+        p00 行 = y-2（上上行）、p10 行 = y-1（上一行）、p20 行 = y（当前行）
+    因此只在顶部补 2 行 0，底部不补——RTL 是因果的，不使用未来行。
+    （若按"以 y 为中心"补 0，最后一行会把下方当成全黑而产生假边缘）
+    """
+    p = np.pad(gray.astype(np.int32), ((2, 0), (1, 1)), mode="constant", constant_values=0)
     p00 = p[0:-2, 0:-2]; p01 = p[0:-2, 1:-1]; p02 = p[0:-2, 2:]
     p10 = p[1:-1, 0:-2]; p11 = p[1:-1, 1:-1]; p12 = p[1:-1, 2:]
     p20 = p[2:,   0:-2]; p21 = p[2:,   1:-1]; p22 = p[2:,   2:]
@@ -161,7 +167,12 @@ def process(rgb: np.ndarray, k: int = DEFAULT_K, floor: int = DEFAULT_FLOOR,
     thr = threshold_map(sum9, k, floor)
     if ideal:
         return hysteresis_ideal(mag, thr)
-    return hysteresis_causal(mag, thr)
+    edge = hysteresis_causal(mag, thr)
+    # 边界规则与 RTL 的 win_valid 严格一致：
+    # 前 2 行没有上上行数据；行首第 0 列凑不齐左边界 -> 输出 0
+    edge[:2, :] = 0
+    edge[:, :1] = 0
+    return edge
 
 
 # ============================================================
@@ -187,6 +198,17 @@ def save_raw(arr01: np.ndarray, path: str) -> None:
     """存成 RTL testbench 可直接读的原始字节（1 字节/像素，0 或 255）"""
     with open(path, "wb") as f:
         f.write((arr01.astype(np.uint8) * 255).tobytes())
+
+
+def save_txt(arr: np.ndarray, path: str, hexdigits: int = 1) -> None:
+    """导出文本向量（每行一个十六进制数）供 ModelSim $readmemh 读取。
+
+    gray_*.txt = 输入灰度（2 位十六进制），edge_*.txt = 期望边缘（1 位）
+    """
+    flat = arr.astype(np.uint16).ravel()
+    with open(path, "w", encoding="ascii", newline="\n") as f:
+        for v in flat:
+            f.write(format(int(v), "0{}x".format(hexdigits)) + "\n")
 
 
 def save_rgb_png(rgb: np.ndarray, path: str) -> None:
@@ -236,7 +258,17 @@ def main() -> None:
         save_rgb_png(rgb, os.path.join(args.out, f"in_{name}.png"))
         save_png(edge, os.path.join(args.out, f"edge_{name}.png"))
         save_raw(edge, os.path.join(args.out, f"edge_{name}.raw"))
-        print(f"  [{name}] 边缘像素占比 {ratio:5.2f}%  -> edge_{name}.png / .raw")
+        # RTL 比对用文本向量：输入灰度 + 期望边缘（ModelSim $readmemh 读）
+        save_txt(to_gray(rgb), os.path.join(args.out, f"gray_{name}.txt"), 2)
+        save_txt(edge, os.path.join(args.out, f"edge_{name}.txt"), 1)
+        # 中间结果（mag/thr）供差异定位
+        _mag, _sum9 = sobel_and_mean(to_gray(rgb))
+        _thr = threshold_map(_sum9, args.k, args.floor)
+        _mag[:2, :] = 0
+        _thr[:2, :] = 0
+        save_txt(_mag, os.path.join(args.out, f"mag_{name}.txt"), 3)
+        save_txt(_thr, os.path.join(args.out, f"thr_{name}.txt"), 3)
+        print(f"  [{name}] 边缘像素占比 {ratio:5.2f}%  -> edge/gray/mag/thr 四组向量")
 
         if args.ideal:
             edge_i = process(rgb, k=args.k, floor=args.floor, ideal=True)

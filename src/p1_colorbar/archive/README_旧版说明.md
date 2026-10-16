@@ -10,7 +10,7 @@
 | `OUR_p1_colorbar_v1_20261014.bit` | **按键约束在扩展口 N2/J14**（照抄官方 pin.adc），板载 KEY1/KEY2 根本按不到 → 按键功能等于没有 | v3 |
 | `OUR_p1_colorbar_v2_onboard_key.bit` | 按键已改到板载 D5/A9，但 **`debounce_btn.v` 的采样计数器位宽不足**（16 位装不下 74249）→ 采样脉冲永不产生，**按键完全无响应**（综合器还把这段死逻辑优化掉了：reg 仅 1256） | v3 |
 
-**✅ 现行可用版本**：`..\bitbank\OUR_p1_colorbar_v3_debounce_fix.bit`
+**✅ 现行可用版本**：见 `..\bitbank\位流台账.md` 的「★ 现行版本」行（P1 里程碑 = `..\bitbank\OUR_p1_colorbar_verified.bit`）
 （2026-10-14 22:19 生成；按键切图案 + LED 指示 + 状态带全部上板验证通过；reg 1409 / LUT 941 / 时序无违规）
 
 ## oneoff_scripts\ —— 一次性脚本（已完成使命）
