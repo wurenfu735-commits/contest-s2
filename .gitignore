@@ -119,3 +119,8 @@ assets/ref_docs/extracted/
 # ── 手工备份文件：旧版本在 git 历史里能翻，不必占工作区 ──────────────────
 # 例：hdmi_mixer.v.bak_before_official_osd
 *.bak_*
+
+# ── 第三方开源源码原文：两个来源仓库均无 License（= 保留所有权利），
+#    入库即再分发 → 只留链接与分析，不存原文（docs/research/R3_参考源码/README.md）──
+docs/research/R3_参考源码/*.sv
+docs/research/R3_参考源码/*.v
