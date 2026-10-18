@@ -1,4 +1,4 @@
-# run_tb_96.ps1 —— v4 一键验证：edge_adaptive_96（并行版）vs Python 黄金模型
+﻿# run_tb_96.ps1 —— v4 一键验证：edge_adaptive_96（并行版）vs Python 黄金模型
 #
 # 用法：pwsh -File src\p1_colorbar\tools\run_tb_96.ps1
 #
@@ -10,14 +10,24 @@
 #       跑完若内容有变会出现在 git status 里，提交前必须确认是不是"该提交的参考数据"。
 # 附带：参照版 edge_adaptive_pixel（RTL 第二形态）同 tb 仿真，仅作参考。
 $ErrorActionPreference = 'Stop'
-$MS   = "E:\app\Software\work\modelsim\win64"
-$ROOT = "E:\fpga\contest_s2"
+# 仓库根由脚本位置推导，不再绑死某台机器的绝对路径
+$ROOT = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
 $RTL  = "$ROOT\src\p1_colorbar\rtl"
 $TB   = "$ROOT\src\p1_colorbar\tb\unit\tb_edge_adaptive_96.v"
 $IP   = "$ROOT\src\p1_colorbar\OUR_project\hdmi_base_src\user_source\hdl_source\isp\demosaic_4x_2_0\blk_mem_gen_zhenghe"
 $MOD  = "$ROOT\sim\golden\ph1p_eram_sim_model.v"
 $WORK = "$ROOT\sim\tb96"
-$PY   = "E:\app\Software\daily\python\python.exe"
+
+# 仿真器 / Python 路径：优先取环境变量，其次用默认位置（各机器自行覆盖）
+$MS = if ($env:MODELSIM_BIN) { $env:MODELSIM_BIN } else { "E:\app\Software\work\modelsim\win64" }
+$PY = if ($env:PYTHON_EXE)   { $env:PYTHON_EXE }   else { "E:\app\Software\daily\python\python.exe" }
+
+if (-not (Test-Path (Join-Path $MS "vlog.exe"))) {
+    Write-Output "!! 找不到 ModelSim：$MS"
+    Write-Output "   请设置环境变量 MODELSIM_BIN 指向含 vlog.exe 的 win64 目录，例如："
+    Write-Output '   $env:MODELSIM_BIN = "D:\modelsim\win64"; pwsh -File src\p1_colorbar\tools\run_tb_96.ps1'
+    exit 1
+}
 
 New-Item -ItemType Directory -Force -Path $WORK | Out-Null
 Set-Location -LiteralPath $WORK

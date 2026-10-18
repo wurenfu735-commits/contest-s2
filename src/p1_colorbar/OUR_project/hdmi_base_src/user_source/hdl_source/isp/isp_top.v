@@ -106,7 +106,7 @@ awb #(
   edge_adaptive_96 #(
       .IMG_WIDTH  (1280),
       .IMG_HEIGHT (720),
-      .THR_FLOOR  (11'd96)    // v4 分段地板基准：暗/中/亮 = 192/160/128/96（与黄金模型一致）
+      .THR_FLOOR  (11'd96)    // v5 分段地板基准：四档 = 144/132/116/96（偏移量走模块默认 48/36/20/0）
   ) u_edge_adaptive_96 (
       .I_clk   (axi4s_video_aclk),
       .I_rst_n (I_rst_n),
