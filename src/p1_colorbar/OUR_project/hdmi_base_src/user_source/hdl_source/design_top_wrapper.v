@@ -160,6 +160,12 @@ module design_top_wrapper (
     wire        S_hdmi_out_de;
     wire[23:0]  S_hdmi_out_data;
 
+    // ---- B4 OSD 叠加（自研 osd_overlay.v，插在 hdmi_mixer 之后、hdmi_tx 之前）----
+    wire        S_osd_vs;
+    wire        S_osd_hs;
+    wire        S_osd_de;
+    wire[23:0]  S_osd_data;
+
     wire[23:0]  S_video_rd_data;
     reg         S_dbg_raw_seen;
     reg         S_dbg_isp_seen;
@@ -883,6 +889,38 @@ isp_top u_isp_top (
         .O_hdmi_data     ( S_hdmi_out_data    )
     );
 
+    // ==================================================================
+    // B4 · OSD 叠加：两条路，二选一
+    //   默认（未定义 OSD_SELF_DEV）：用**官方实现**——上面 u_hdmi_mixer 内部
+    //     已自带 Logo(160x160) + "安路 CNT:" 文字叠加，此处直连即可。
+    //     依赖官方 anlogic_logo_rom.v / osd_char_lib.v（已加入工程）。
+    //   定义 OSD_SELF_DEV：切到自研 osd_overlay.v（hdmi_mixer 输出的像素域
+    //     再叠一层 208x156 面板 + Logo + 两行英文文字）。
+    //   两种实现的采样时钟域、信号时序、1 拍延迟关系均一致。
+    // ==================================================================
+`ifdef OSD_SELF_DEV
+    osd_overlay #(
+        .H_ACTIVE ( 1280 ),
+        .V_ACTIVE ( 720  )
+    ) u_osd_overlay (
+        .I_pix_clk ( S_hdmi_pixel_clk  ),
+        .I_rst_n   ( S_hdmi_rst_n      ),
+        .I_vs      ( S_hdmi_out_vsync  ),
+        .I_hs      ( S_hdmi_out_hsync  ),
+        .I_de      ( S_hdmi_out_de     ),
+        .I_data    ( S_hdmi_out_data   ),
+        .O_vs      ( S_osd_vs          ),
+        .O_hs      ( S_osd_hs          ),
+        .O_de      ( S_osd_de          ),
+        .O_data    ( S_osd_data        )
+    );
+`else
+    assign S_osd_vs   = S_hdmi_out_vsync;
+    assign S_osd_hs   = S_hdmi_out_hsync;
+    assign S_osd_de   = S_hdmi_out_de;
+    assign S_osd_data = S_hdmi_out_data;
+`endif
+
     hdmi_tx u_hdmi_tx(
         .I_pixel_clk        ( S_hdmi_pixel_clk  ),
         .I_serial_clk       ( S_hdmi_serial_clk ),
@@ -892,13 +930,13 @@ isp_top u_isp_top (
         .O_edid_read_valid  (                   ),
         .O_edid_read_data   (                   ),
         .I_video_rgb_enable ( 1'b1              ),
-        .I_video_in_vs      ( S_hdmi_out_vsync  ),
-        .I_video_in_de      ( S_hdmi_out_de     ),
+        .I_video_in_vs      ( S_osd_vs         ),
+        .I_video_in_de      ( S_osd_de         ),
         .I_video_in_user    ( 1'b0              ),
         .I_video_in_valid   ( 1'b0              ),
         .I_video_in_last    ( 1'b0              ),
         .O_video_in_ready   (                   ),
-        .I_video_in_data    ( S_hdmi_out_data   ),
+        .I_video_in_data    ( S_osd_data       ),
         .I_audio_valid      ( 1'b0              ),
         .I_audio_left_data  ( 24'd0             ),
         .I_audio_right_data ( 24'd0             ),
