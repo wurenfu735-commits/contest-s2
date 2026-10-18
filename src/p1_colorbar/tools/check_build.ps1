@@ -2,8 +2,10 @@
 # 用法: pwsh -File check_build.ps1
 # 判读内容：bit 是否更新 / 资源占用 / 时序 WNS / 是否有错误 / 新文件是否参与编译
 $ErrorActionPreference = "Continue"
-$tdp = "E:\fpga\contest_s2\src\p1_colorbar\OUR_project\hdmi_base_src\td_project"
-$base = "E:\fpga\contest_s2\src\p1_colorbar\bitbank\OUR_p1_colorbar_v3_debounce_fix.bit"
+# 路径按脚本位置推导，不再绑死某台机器
+$repo = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
+$tdp  = "$repo\src\p1_colorbar\OUR_project\hdmi_base_src\td_project"
+$base = "$repo\src\p1_colorbar\bitbank\OUR_p1_colorbar_v3_debounce_fix.bit"
 
 Write-Output "================ TD 编译结果判读 ================"
 
@@ -33,7 +35,7 @@ $txt = Get-Content -LiteralPath $log
 # ---- 3) 新文件是否参与编译 ----
 Write-Output ""
 Write-Output "[3] 新 RTL 是否参与编译"
-foreach ($f in @("edge_adaptive_pixel.v", "edge_rgb_adapter.v")) {
+foreach ($f in @("edge_adaptive_96.v", "edge_adaptive_pixel.v", "edge_rgb_adapter.v")) {
     $hit = $txt | Select-String -Pattern ([regex]::Escape($f)) -SimpleMatch | Select-Object -First 1
     if ($hit) { Write-Output ("   OK  " + $f) } else { Write-Output ("   ??  " + $f + " 未出现在日志中") }
 }
@@ -84,10 +86,11 @@ $errs = $txt | Select-String -Pattern "ERROR|PRJ-88|PRJ-92|SYN-9|PHY-9" | Select
 if ($errs) { $errs | ForEach-Object { Write-Output ("   " + $_.Line.Trim()) } }
 else { Write-Output "   OK：没有 ERROR 行" }
 
-# ---- 7) 与 v3 基线对比 ----
+# ---- 7) 与上一版基线对比 ----
 Write-Output ""
-Write-Output "[7] 与 v3 基线对比（v3: lut6=941 reg=1409 eram=5 dsp=0）"
-Write-Output "   若 lut6/reg/eram 与 v3 完全相同 => 说明本次没有真正重新综合"
+Write-Output "[7] 与上一版基线对比（官方 OSD + v4：slice 16710 / 78.76%，Setup WNS +0.005ns）"
+Write-Output "   v5 只改了阈值常量（换成 4 个 parameter），结构未变 → slice 应基本持平（±50 内）"
+Write-Output "   若 slice 或 WNS 与上版差异很大 => 说明改动范围超出预期，先查是不是误改了别处"
 
 Write-Output ""
 Write-Output "================ 判读结束 ================"
