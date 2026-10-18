@@ -1,4 +1,4 @@
-# 一键编译+仿真指定 tb（省去手敲 vlog/vsim 命令）
+﻿# 一键编译+仿真指定 tb（省去手敲 vlog/vsim 命令）
 # 用法: pwsh -File run_tb.ps1 -Tb tb_lowcontrast_demo
 #
 # 说明：

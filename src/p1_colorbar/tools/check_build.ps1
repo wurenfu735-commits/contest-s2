@@ -1,4 +1,4 @@
-# TD 编译结果一键判读
+﻿# TD 编译结果一键判读
 # 用法: pwsh -File check_build.ps1
 # 判读内容：bit 是否更新 / 资源占用 / 时序 WNS / 是否有错误 / 新文件是否参与编译
 $ErrorActionPreference = "Continue"

@@ -1,4 +1,4 @@
-# run_tb_96.ps1 —— v4 一键验证：edge_adaptive_96（并行版）vs Python 黄金模型
+﻿# run_tb_96.ps1 —— v4 一键验证：edge_adaptive_96（并行版）vs Python 黄金模型
 #
 # 用法：pwsh -File src\p1_colorbar\tools\run_tb_96.ps1
 #
