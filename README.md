@@ -63,6 +63,7 @@
 | **第一次上板 / 板子不出画面 / 报错看不懂** | [`docs/15_上板实测指南.md`](docs/15_上板实测指南.md) |
 | **基础跑通了，下一步做什么**（应用路线） | [`docs/16_应用方向与开源参考.md`](docs/16_应用方向与开源参考.md) |
 | **哪行能改、哪行不能改；资源不够怎么省** | [`docs/17_优化点与官方边界.md`](docs/17_优化点与官方边界.md) |
+| **提交前自查：是否符合官方要求**（逐条证据） | [`docs/20_官方要求合规自检.md`](docs/20_官方要求合规自检.md) |
 | **多人/多机怎么改不打架** | [`docs/10_协作规范.md`](docs/10_协作规范.md) |
 | 算法怎么改（规格 + 调研） | [`docs/08_算法规格_P2.md`](docs/08_算法规格_P2.md)（v4 规格） · [`docs/research/README.md`](docs/research/README.md) · [`docs/research/R1_自适应阈值边缘检测.md`](docs/research/R1_自适应阈值边缘检测.md) |
 | 执行路线图、分工 | [`docs/07_执行路线图.md`](docs/07_执行路线图.md) |
@@ -73,7 +74,7 @@
 ## 目录结构
 
 ```
-docs/       文档（00 阅读指南 → 17 优化点与官方边界）+ research/ 算法调研（含 R3 参考源码，只借思路不照搬）+ archive/ 历史
+docs/       文档（00 阅读指南 → 20 合规自检）+ research/ 算法调研（含 R3 参考源码，只借思路不照搬）+ archive/ 历史
 memory/     进度与记忆：PROGRESS.md（阶段实测数据）、MEMORY.md（不变事实与坑）
 src/        自研 RTL 工程 —— src/p1_colorbar/
 sim/        仿真对照与 tb 运行目录（tb96\、work_tb\、eram_probe\；v2/v3 时代黄金模型留档在 sim\golden\）
