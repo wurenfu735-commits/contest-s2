@@ -75,7 +75,7 @@ python tools/verify_remote.py --branch main --deep     # 退出码 0 = 一致，
   - 顶层 = `colorbar_top`；自研 rtl 在 `src\p1_colorbar\rtl\`（工程内相对路径 `../../../rtl/`）；约束 `../../../constraints/colorbar_top.adc`
   - 改名前的 `.al`/`.sdc` 备份在 `D:\dsh-home\tmp\rename_backup\`；改名脚本留档 `src\p1_colorbar\archive\oneoff_scripts\rename_project.ps1`
   - 官方原包（`HX1P35A_Contest_202606\...\lab_ex1_mipi_hdmi`）保持只读，仍是官方基线
-- **文档地图（2026-10-14 建立，2026-10-16 更新）**：总索引 = `docs\00_阅读指南.md`；活文档 = 01 赛题解读 / 02 文件存放规划 / 03 编译烧写速查 / 04 官方例程清单 / 05 开源调研 / 06 情报与呈现方案 / 07 执行路线图 / 08 算法规格_P2 / 09 问题总结_按键无响应 / 10 协作规范 / **11 复用与自研清单（答辩用）**；历史文档 = `docs\archive\`；原始备份 = `contest_s2\_backup_docs_20261014_2230\`
+- **文档地图（2026-10-14 建立，2026-10-16 更新，★2026-10-19 收敛重构）**：**总索引 = 根目录 `README.md`**；活文档只有 8 份 = `README.md` · `需求文档.md` · `docs\PLAN.md`（路线/排期/验收）· `docs\操作手册.md`（编译烧写上板排错）· `docs\算法规格.md`（v5 规格+选型）· `docs\答辩与合规.md`（自研边界/合规/稳定性）· `docs\阶段提示词.md`（AI 执行单元）· `docs\01_赛题解读.md`；**旧 25 份编号文档一律移入 `docs\archive\`（只留痕不照用）**，映射见 `docs\archive\README.md`。原始备份 = `contest_s2\_backup_docs_20261014_2230\`
 - **src 目录规约（2026-10-14 建立，2026-10-16 重构）**：**`src\p1_colorbar\README.md` = 工程文件地图（唯一权威）**，含 30 秒速览 / 目录职责 / 最新版本判断依据 / 可随时删清单 / 旧版本三步处理；`bitbank\` 只留里程碑 bit，**现行版本看 `bitbank\位流台账.md` 的「★ 现行版本」行**（不看文件名）；tb 分 `unit\`（模块级）/ `integration\`（集成级）/ `gen\`（脚本自动生成，可删）三类，对照表在 `tb\README.md`
 
 ## 五、已踩坑速查（继承自历史，避免重犯）
@@ -209,7 +209,7 @@ python tools/verify_remote.py --branch main --deep     # 退出码 0 = 一致，
 1. **扩展项必须做满**——国一原话："基础与扩展做满方能进入线下"；扩展不是选做，是决赛门票。
 2. **算法数量本身就是分数**（国一做了 15 种图像处理模块）：算法做成**可插拔模块**，目标 6~10 种效果（边缘/卡通/浮雕/马赛克/素描/热力图/运动检测…）。
 3. **展示视频权重最高**——评委原话："一个优质的展示视频基本占晋级概率 **70%**"：素材随做随录、每个功能前加字幕标题、全程报数值指标（资源/帧率/延时）。
-4. **每个扩展项动工前先做可行性调研**（用户要求）：按 `docs\07_执行路线图.md` 第四部分模板产出 1 页 `docs\research\Rn_<项目名>.md`，全队看过再动手。
+4. **每个扩展项动工前先做可行性调研**（用户要求）：按 `docs/PLAN.md` 的模板产出 1 页 `docs\research\Rn_<项目名>.md`，全队看过再动手。
 
 **能力边界（已写入 `docs\12`）**：像素级 / 邻域级 / 规则级算法全都能实时做（FPGA 主场）；需要 CNN/NPU 的目标识别做不了（本芯片无 NPU，38K LUT 不够）。
 - **插件引擎端到端可用**（2026-10-14）：`python engine\avis.py encode <视频> -o <目录> --obj-tracks --asr-model tiny --skip-mv` 能产出 AVIS 语义层（运动矢量 / 场景分类 / 对象跟踪）；未跑通的是可选件：OCR（缺 PaddleOCR）、YOLO（缺 ultralytics）。
