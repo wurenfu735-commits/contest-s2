@@ -698,3 +698,104 @@ syn 4m14s / phy 4m51s，**Setup WNS +101ps、Hold +20ps、0 违例**，slice **1
 - `check_build.ps1` 日志路径 bug
 - 仓库瘦身 `git rm -r --cached`（121 文件 / 90.5 MB）待确认
 - `docs/18` 三个决策项（OSD 二选一 / 路线 A·B·C / 是否有第二摄像头）
+
+---
+
+## Logo 开销定量 + 换掉官方 OSD 通路 —— 2026-10-19
+
+### 起因
+用户问「最后加的那个 logo 是不是占得资源太多了」，同时明确「按官方要求 logo 不能去掉，基础要求要加上」。
+先核官方 PDF p16 2.3(4)：「实现信息叠加功能：在输出视频画面中叠加简单图形或文字信息（OSD），
+并包含"安路"标识 Logo。」→ **Logo 确实不可删**，只能换实现方式。
+
+### 实验：把 Logo 位图换成常量，完整跑一遍 syn+phy
+
+做法：临时把 `anlogic_logo_rom.v` 的查表体换成返回常量 → 跑完整流程 → **逐字节还原**
+（还原四项核验全过：`sha256 09b288fa…` / `git hash-object 5d99c37a…` / 6400 行 / `git diff` 为空）。
+
+| 指标 | v5 基线（有 Logo） | Logo 桩（无位图） | 差值 |
+|---|---|---|---|
+| `#lut6`（P&R） | 14,534 | 11,757 | **−2,777** |
+| `#slice`（P&R） | 16,616（78.32%） | 14,291（67.36%） | **−2,325** |
+| `#eram` | 60 | 60 | 0 |
+| `#dsp` | 9 | 8 | −1 |
+| SWNS | +0.101 ns | +0.655 ns | +0.554 ns |
+| `u_hdmi_mixer` LUT | 2,551 | 211 | **−2,340** |
+
+**结论：一块 Logo = 全片 10.96% 的 slice + 1 个 DSP + 0.554 ns 时序余量。**
+根因：官方位图是**纯组合 `case`**（`addr = y*160+x`，6,387 条 25bit 常量），
+综合把它展开成一棵巨大的多路选择树，而它同时又是一条长关键路径。
+
+### ★ 关键更正：`OSD_SELF_DEV` 开关早就失效了
+
+原计划是「定义 `OSD_SELF_DEV` 就切回自研 OSD、回收 ≈1,960 slice」。**这条是错的。**
+
+- `git log --follow hdmi_mixer.v` 只有 2 条：初始 182 行（无 Logo）→ B4 换成 909 行官方 OSD 版
+- `u_hdmi_mixer` 在 `design_top_wrapper.v:875` 是**无条件例化**，`` `ifdef `` 在 901 行
+- 所以定义 `OSD_SELF_DEV` 的效果是**双 Logo + 资源涨到 ≈80.6%**，不是二选一
+
+已在 `docs/15/17/18/20` 四处加更正方框，路线改为自己写 `mixer_lite.v`。
+
+### Logo 方案定稿：2 色 + 透明（用户要求「把区域主颜色定下来」）
+
+查 `rtl/osd_logo_rom.v`，发现它**已经是 2bit/像素**：`2'd0`=透明 / `2'd1`=深蓝 `#1C2D4E` / `2'd2`=红 `#ED1C24`，
+146×94，6,387 条目。渲染验证（`tools/our_logo.png`）**6,387 个不透明像素与官方图逐个对上**。
+
+依据：579 色里前 2 色占 **59.3%**（深蓝 3,003px + 安路红 785px），k-means 实测 16 色平均误差 0.56%、
+8 色 0.95%、4 色 2.26% —— 但既然 2 色已把面积压到几乎为零，再上 16 色只是徒增 400 LUT 换肉眼看不出的差异。
+对比图 `tools/logo_palette_cmp.png`（原图/16色/8色/4色 四联）。
+
+### 实现：`rtl/mixer_lite.v`（≈90 行，L3 自研）
+
+官方 `hdmi_mixer` 去掉 OSD 后只剩三件事，逐拍照抄：
+1. `assign O_video_rd_en = I_video_de`（**组合直通，不能加寄存器**）
+2. vsync/hsync/de/data **各打 3 拍**（1d → 2d → 输出寄存器）
+3. 叠 OSD
+
+顶层 `design_top_wrapper.v`：顶部加 `` `define MIXER_LITE ``（内部自动带上 `OSD_SELF_DEV`），
+`u_hdmi_mixer` 整块包进 `` `ifdef MIXER_LITE … else … endif ``，`ifdef` 分支例化 `mixer_lite u_mixer_lite(...)`。
+**官方 `hdmi_mixer.v` 文件保留不删**，只是顶层不再例化它。
+
+### ★ 最大的坑：流程读 `.prj` 不读 `.al`
+
+只把 `mixer_lite.v` 加进 `OUR_p1_colorbar.al` → 综合报
+`HDL-8007 ERROR: mixer_lite is a black box in design_top_wrapper.v(890)`。
+
+排查：`.prj` 的 `RunTime="2026-10-17T23:30:00"`（未重新生成）、`grep -c mixer_lite` = **0**、
+而 `osd_overlay` = 1 → **`DefaultFlow.tcl` 实际读 `Runs/{syn_1,phy_1}/OUR_p1_colorbar.prj`（绝对路径）**。
+手工把条目补进两个 `.prj`（绝对路径、`CompileOrder=66`）后构建成功。
+
+→ 已把这一步做成 `rebuild.ps1` 的 **0.5 步自愈**（以后换电脑/换分支/TD 重新生成工程都不会再踩）。
+自愈逻辑用「剥掉 → 补回 → 与原文件逐字节比对」验证过：**31,463 B 完全一致**。
+过程中还修了两个细节：① 必须**无 BOM**（原 `.prj` 无 BOM，PS 5.1 的 `Set-Content -Encoding UTF8` 会加）；
+② 必须用 **纯 LF**（原 `.prj` 实测 CR=0，用 CRLF 会混入 8 个 CR）。
+
+### 构建结果（syn 1.7 min / phy 3.3 min，rc=0）
+
+| 指标 | v5（官方 OSD） | **B5（mixer_lite）** |
+|---|---|---|
+| `#slice`（P&R） | 16,616（78.32%） | **14,547（68.57%）** |
+| `#lut6` | 14,534 | **12,239** |
+| `#slice reg` | 14,071 | **14,054** |
+| `#eram` | 60 | **60** |
+| `#dsp` | 9 | **8** |
+| Setup WNS | +101 ps | **+1,311 ps** |
+| Hold WNS | +20 ps | **+20 ps** |
+| 违例 | 0 | **0** |
+
+网表核对（`syn_1/OUR_p1_colorbar_gate.area`）：
+- `u_mixer_lite`：**0 LUT + 78 reg**（官方是 2,551 LUT）
+- `u_osd_overlay`：**623 LUT**（Logo + 208×156 面板 + 两行 5×7 文字）
+- `hdmi_mixer` 出现次数 = **0**
+
+**省 2,069 slice（−9.75 个百分点），80% 安全线下的预算从 357 涨到 2,426。**
+时序从 +101ps 跳到 +1311ps 是因为那棵 6,387 支的选择树本身是长路径之一，它一消失关键路径退回 DDR `usr_clk` 域。
+
+位流：`bitbank/OUR_b5_mixerlite_logo2c.bit`
+（1,789,539 B，SHA256 前16 `42f4e08508dcc981`，MD5 `544d2fd2180636da20fd5dd7e99cdb41`）
+
+### 待办
+- **上板验证 B5**：Logo 双色是否正确、`安路` 面板/文字是否正常、画面无偏移、无花屏
+- `docs/18` 七项扩展按新预算重排（现在有 2,426 slice 可用）
+- 填 `docs/21_系统稳定性测试记录.md`（连续 30min / 明暗 10 轮 / 断电拔插 3 次）
+- `check_build.ps1` 日志路径 bug 仍未修

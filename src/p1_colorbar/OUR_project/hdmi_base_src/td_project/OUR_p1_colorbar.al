@@ -400,6 +400,14 @@
                     <Attr Name="CompileOrder" Val="63"/>
                 </FileInfo>
             </File>
+            <File Path="../../../rtl/mixer_lite.v">
+                <FileInfo>
+                    <Attr Name="UsedInSyn" Val="true"/>
+                    <Attr Name="UsedInP&R" Val="true"/>
+                    <Attr Name="BelongTo" Val="design_1"/>
+                    <Attr Name="CompileOrder" Val="66"/>
+                </FileInfo>
+            </File>
             <File Path="../user_source/hdl_source/anlogic_logo_rom.v">
                 <FileInfo>
                     <Attr Name="UsedInSyn" Val="true"/>

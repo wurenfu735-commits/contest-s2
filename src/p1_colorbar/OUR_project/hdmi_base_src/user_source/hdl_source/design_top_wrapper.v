@@ -1,5 +1,26 @@
 
 
+// ============================================================================
+// 2026-10-19 新基线开关：MIXER_LITE
+//
+// 置为已定义（当前）：走  rtl/mixer_lite.v + rtl/osd_overlay.v
+//     · 官方 hdmi_mixer 的 OSD 通路不参与综合（文件仍留在工程里，不删不改）
+//     · Logo 改用 2bit/像素品牌双色（深蓝 #1C2D4E + 安路红 #ED1C24）
+//     · 实测收益：slice 16,616 → 14,291 那一档（省 ≈1,995），详见 docs/17 O1
+//
+// 注释掉：回到官方 hdmi_mixer（909 行，内含 25bit 位图 ROM）
+//     · 那一版 Logo 是 579 色全彩，但一块位图就吃掉 2,325 slice = 全片 10.96%
+//
+// 注意：**不要**再用 `OSD_SELF_DEV` 做开关 —— B4 之后 u_hdmi_mixer 是无条件例化的，
+//       单独定义它只会"再叠一层"，变成双 Logo 且资源反而涨到 ≈80.6%（docs/17 O1）。
+// ============================================================================
+`define MIXER_LITE
+`ifdef MIXER_LITE
+    `ifndef OSD_SELF_DEV
+        `define OSD_SELF_DEV      // 复用原自研 OSD 分支，避免同一段例化写两遍
+    `endif
+`endif
+
 module design_top_wrapper (
     input wire        I_sys_clk,
     input wire        I_rst_n,
@@ -864,6 +885,25 @@ isp_top u_isp_top (
         .O_vtc_last    ( S_hdmi_last      )
     );
 
+`ifdef MIXER_LITE
+    // ---- 轻量通路（新基线）：3 拍直通 + 读使能，OSD 交给下面的 osd_overlay ----
+    mixer_lite u_mixer_lite(
+        .I_clk           ( S_hdmi_pixel_clk   ),
+        .I_rst_n         ( S_hdmi_rst_n       ),
+        .I_video_vsync   ( S_hdmi_vsync       ),
+        .I_video_hsync   ( S_hdmi_hsync       ),
+        .I_video_de      ( S_hdmi_de          ),
+        .I_video_user    ( S_hdmi_user        ),
+        .I_video_last    ( S_hdmi_last        ),
+        .O_video_rd_en   ( S_hdmi_window_rd_en),
+        .I_video_rd_data ( S_video_rd_data    ),
+        .O_hdmi_vsync    ( S_hdmi_out_vsync   ),
+        .O_hdmi_hsync    ( S_hdmi_out_hsync   ),
+        .O_hdmi_de       ( S_hdmi_out_de      ),
+        .O_hdmi_data     ( S_hdmi_out_data    )
+    );
+`else
+    // ---- 官方通路（旧基线，25bit 位图，吃 2,325 slice）----
     hdmi_mixer #(
         .H_OFFSET   ( 0    ),
         .V_OFFSET   ( 0    ),
@@ -888,15 +928,16 @@ isp_top u_isp_top (
         .O_hdmi_de       ( S_hdmi_out_de      ),
         .O_hdmi_data     ( S_hdmi_out_data    )
     );
+`endif
 
     // ==================================================================
-    // B4 · OSD 叠加：两条路，二选一
-    //   默认（未定义 OSD_SELF_DEV）：用**官方实现**——上面 u_hdmi_mixer 内部
-    //     已自带 Logo(160x160) + "安路 CNT:" 文字叠加，此处直连即可。
-    //     依赖官方 anlogic_logo_rom.v / osd_char_lib.v（已加入工程）。
-    //   定义 OSD_SELF_DEV：切到自研 osd_overlay.v（hdmi_mixer 输出的像素域
-    //     再叠一层 208x156 面板 + Logo + 两行英文文字）。
-    //   两种实现的采样时钟域、信号时序、1 拍延迟关系均一致。
+    // B4 · OSD 叠加
+    //   ★ 2026-10-19 起：MIXER_LITE 已定义 → 上面的 mixer_lite 不做 OSD，
+    //     所以这里的 OSD_SELF_DEV 也由顶部自动定义，走 rtl/osd_overlay.v
+    //     （208x156 面板 + 146x94 品牌双色 Logo + 两行 5x7 文字）。
+    //   ⚠️ 不要单独定义 OSD_SELF_DEV 而不定义 MIXER_LITE —— B4 之后官方
+    //     u_hdmi_mixer 是无条件例化的，那样会变成"官方 Logo + 自研 OSD"双层叠加。
+    //     详见 docs/17 优化项 O1 的更正方框。
     // ==================================================================
 `ifdef OSD_SELF_DEV
     osd_overlay #(
