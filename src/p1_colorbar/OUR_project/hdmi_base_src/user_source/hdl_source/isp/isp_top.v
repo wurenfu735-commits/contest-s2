@@ -132,6 +132,45 @@ awb #(
       .O_tready(edge_O_tready)
   );
 
+  // ---- 第二算法：形态学梯度（2026-10-19，高阶①多算法切换）----
+  //   与 edge_adaptive_96 并行例化（同输入、同 3 拍延迟），mode 5 时选它
+  //   注意：.I_tready 悬空 —— 上游 ready 已由 edge_adaptive_96 驱动，避免多驱动
+  wire         morph_O_tlast;   //synthesis keep
+  wire         morph_O_tuser;   //synthesis keep
+  wire [ 95:0] morph_O_tdata;   //synthesis keep
+  wire [ 31:0] morph_O_mag;     //synthesis keep
+  wire         morph_O_tvalid;  //synthesis keep
+
+  morph_grad_96 #(
+      .IMG_WIDTH  (1280),
+      .IMG_HEIGHT (720),
+      .MORPH_THR  (8'd20)     // 形态学梯度阈值（演示可调：小=边缘更粗）
+  ) u_morph_grad_96 (
+      .I_clk   (axi4s_video_aclk),
+      .I_rst_n (I_rst_n),
+      .I_mode  (I_mode),
+      .I_k     (I_k),
+      .I_tlast (awb_O_tlast),
+      .I_tuser (awb_O_tuser),
+      .I_tdata (awb_O_tdata),
+      .I_tvalid(awb_O_tvalid),
+      .I_tready(),                    // 悬空：上游 ready 由 edge_adaptive_96 驱动
+      .O_tlast (morph_O_tlast),
+      .O_tuser (morph_O_tuser),
+      .O_tdata (morph_O_tdata),
+      .O_mag   (morph_O_mag),
+      .O_tvalid(morph_O_tvalid),
+      .O_tready(edge_O_tready)        // 下游 ready（与 edge 同）
+  );
+
+  // ---- 算法选择：mode 5 = 形态学梯度，其他 = 平滑梯度（edge_adaptive_96）----
+  wire         S_algo_is_morph = (I_mode == 3'd5);                          //synthesis keep
+  wire [ 95:0] algo_tdata = S_algo_is_morph ? morph_O_tdata : edge_O_tdata;  //synthesis keep
+  wire [ 31:0] algo_mag   = S_algo_is_morph ? morph_O_mag   : edge_O_mag;   //synthesis keep
+  wire         algo_valid = S_algo_is_morph ? morph_O_tvalid: edge_O_tvalid; //synthesis keep
+  wire         algo_last  = S_algo_is_morph ? morph_O_tlast : edge_O_tlast;  //synthesis keep
+  wire         algo_user  = S_algo_is_morph ? morph_O_tuser : edge_O_tuser;  //synthesis keep
+
   // 边缘叠加（独立模块）：原图 + 边缘二值图/梯度灰阶 → 叠加图
   //   mode 4：梯度灰阶叠加原图（强边亮/弱边暗/非边原图）；其他：二值图透传
   edge_overlay u_edge_overlay (
@@ -139,12 +178,12 @@ awb #(
       .I_rst_n       (I_rst_n),
       .I_orig        (awb_O_tdata),
       .I_orig_valid  (awb_O_tvalid),
-      .I_edge        (edge_O_tdata),
-      .I_mag         (edge_O_mag),
+      .I_edge        (algo_tdata),
+      .I_mag         (algo_mag),
       .I_mode        (I_mode),
-      .I_edge_valid  (edge_O_tvalid),
-      .I_edge_last   (edge_O_tlast),
-      .I_edge_user   (edge_O_tuser),
+      .I_edge_valid  (algo_valid),
+      .I_edge_last   (algo_last),
+      .I_edge_user   (algo_user),
       .O_data        (overlay_O_tdata),
       .O_valid       (overlay_O_tvalid),
       .O_last        (overlay_O_tlast),

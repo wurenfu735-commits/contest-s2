@@ -2,7 +2,7 @@
 //
 // 职责：
 //   1. 4 路按键消抖（复用 debounce_btn：低有效、两级同步 + 1kHz 采样 + 20ms 稳定）
-//   2. KEY1 循环切换显示模式 O_mode（0→1→2→3→4→0，共 5 态）
+//   2. KEY1 循环切换显示模式 O_mode（0→1→2→3→4→5→0，共 6 态；5 = 形态学梯度）
 //      0 原图 / 1 官方判决 / 2 我们的判决 / 3 左右分屏 / 4 边缘叠加原图（P1 新增）
 //   3. KEY2 循环切换灵敏度档 O_k（0→1→2→3→0）
 //   4. KEY3 一键复位模式到默认 2（我们的判决）；KEY4 一键复位灵敏度到默认 2
@@ -20,7 +20,7 @@ module mode_ctl #(
     input  wire        I_clk,
     input  wire        I_rst_n,
     input  wire [3:0]  I_btn,     // 板载 KEY1~4，按下为低电平
-    output reg  [2:0]  O_mode,    // 5 态：0 原图 / 1 官方 / 2 我们 / 3 分屏 / 4 边缘叠加
+    output reg  [2:0]  O_mode,    // 6 态：0 原图 / 1 官方 / 2 我们 / 3 分屏 / 4 边缘叠加 / 5 形态学梯度
     output reg  [1:0]  O_k        // 灵敏度档 0..3
 );
 
@@ -38,7 +38,7 @@ module mode_ctl #(
             O_k    <= 2'd2;
         end else begin
             // KEY1 循环切模式（0→1→2→3→4→0）；KEY3 兜底复位到默认
-            if (press[0])      O_mode <= (O_mode == 3'd4) ? 3'd0 : O_mode + 3'd1;
+            if (press[0])      O_mode <= (O_mode == 3'd5) ? 3'd0 : O_mode + 3'd1;
             else if (press[2]) O_mode <= 3'd2;
             // KEY2 循环切灵敏度；KEY4 兜底复位到默认
             if (press[1])      O_k <= (O_k == 2'd3) ? 2'd0 : O_k + 1'd1;
