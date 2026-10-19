@@ -11,7 +11,8 @@
 // 时钟域：HDMI_PIXEL_CLK（74.25MHz），OSD 同域，输出直接给显示用无需再跨域。
 //   mipi_rx_error 来自 csi_rx_clk（~103.52MHz）域，内部 2 级 FF 同步 + 上升沿检测。
 //
-// 资源预估：~120 LUT + ~90 FF · 0 DSP · 0 ERAM（74.25M 域纯计数，无窗口无乘法）
+// 资源预估：~120 LUT + ~90 FF · 0 DSP · 0 ERAM
+// 注：输出驱动 reg 加 keep 防 dead code 优化（输出未接 LED/OSD 时综合器会裁剪）（74.25M 域纯计数，无窗口无乘法）
 //
 // 接入（等 td.exe 退出后做，本轮不动 .al）：
 //   1) .al 在 System_Verilog 段加本文件
@@ -37,7 +38,7 @@ module perf_counter #(
 );
 
     // ---- 1 秒计时器 ----
-    reg [26:0] sec_cnt;            // 0..CLK_HZ-1，2^27=134M 够装 74.25M
+    (* keep = "true" *) reg [26:0] sec_cnt;            // 0..CLK_HZ-1，2^27=134M 够装 74.25M
     wire       sec_tick = (sec_cnt == CLK_HZ - 1);
 
     always @(posedge I_clk or negedge I_rst_n) begin
@@ -51,9 +52,9 @@ module perf_counter #(
     wire       vsync_rise = I_vsync & ~vsync_1d;
 
     // ---- 本秒帧数 + 锁存 fps + 总帧数 ----
-    reg [7:0]  fps_cnt;          // 本秒内的帧数
-    reg [7:0]  fps_latch;        // 满秒时锁存，给显示
-    reg [31:0] frame_cnt;        // 总帧数
+    (* keep = "true" *) reg [7:0]  fps_cnt;          // 本秒内的帧数
+    (* keep = "true" *) reg [7:0]  fps_latch;        // 满秒时锁存，给显示
+    (* keep = "true" *) reg [31:0] frame_cnt;        // 总帧数
 
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n) begin
@@ -80,7 +81,7 @@ module perf_counter #(
     reg        err_sync_1d;
     reg        err_sync_2d;
     reg        err_2d;            // 用于沿检测
-    reg [15:0] err_cnt;
+    (* keep = "true" *) reg [15:0] err_cnt;
     wire       err_rise = err_sync_2d & ~err_2d;
 
     always @(posedge I_clk or negedge I_rst_n) begin
