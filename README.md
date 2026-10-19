@@ -107,9 +107,9 @@ tools/      辅助脚本：黄金模型 gen_golden_v4.py、patch_al_camera.py、
 **2. 位流走 GitHub Releases，不进 git。** 每个 `.bit` 约 1.7 MB。
 **判断哪个是现行版看 `位流台账.md` 的「★ 现行版本」，不要看文件名**——同阶段位流字节数几乎相同。
 
-> ⚠️ **待你拍板的冲突**：`.gitignore` 里有 `!src/p1_colorbar/bitbank/*.bit`（例外：位流入库，便于 `git clone` 直接拿到），
-> 与本条"位流不进 git"矛盾。2026-10-19 整理时已把 8 个位流从版本库移出（现为 untracked），
-> 但规则还留着——下次 `git add -A` 会再加回来。**二选一：删掉那条例外，或把本条改成"现行位流入库"。**
+> ✅ **2026-10-19 已统一**：`.gitignore` 删掉了原 `!src/p1_colorbar/bitbank/*.bit` 例外，
+> 位流一律不进 git，现行版通过 GitHub Releases 分发（队友 clone 后按台账 ★ 标记去 Releases 取）。
+> 已发布 release：见 [releases](https://github.com/wurenfu735-commits/contest-s2/releases)。
 
 **3. 第三方参考资料不随本仓库分发。** `assets/ref_docs/guoyi_repo*` 是他人 2025 年国一作品的开源副本，
 有独立来源与许可，按 `docs/05`（已归档）里给的 GitHub 地址自行获取。
