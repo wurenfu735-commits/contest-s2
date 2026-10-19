@@ -18,6 +18,7 @@ vsim_stacktrace.vstf
 *.cov
 *.vstf
 work/
+work*/
 __pycache__/
 *.pyc
 # sim/tb96/ 是 run_tb_96.ps1 每次运行的中间产物（par_out/seq_out/golden_out.txt 等，
