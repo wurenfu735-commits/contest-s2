@@ -40,9 +40,19 @@ CTX = ssl.create_default_context()
 
 
 def gh(path):
-    req = urllib.request.Request(API + path if path.startswith("/") else path)
+    # GitHub API 的响应带 Cache-Control: max-age=60，走代理/中间层时会被缓存，
+    # 导致"刚推上去却读到旧 ref"——所以统一加 no-cache + 时间戳参数打掉缓存。
+    import time
+    url = API + path if path.startswith("/") else path
+    if "?" in url:
+        url += f"&_={int(time.time() * 1000)}"
+    else:
+        url += f"?_={int(time.time() * 1000)}"
+    req = urllib.request.Request(url)
     req.add_header("Accept", "application/vnd.github+json")
     req.add_header("User-Agent", "verify-remote")
+    req.add_header("Cache-Control", "no-cache")
+    req.add_header("Pragma", "no-cache")
     tok = os.environ.get("GH_TOKEN")
     if tok:
         req.add_header("Authorization", f"Bearer {tok}")

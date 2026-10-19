@@ -44,12 +44,19 @@ CTX = ssl.create_default_context()
 
 
 def gh(method, path, payload=None):
+    # 统一打掉缓存：GitHub API 带 max-age=60，走代理时读 ref 可能拿到旧值，
+    # 会导致"以为在旧树上打补丁"或"推完读到旧 ref"。
+    import time
     url = path if path.startswith("http") else API + path
+    if method == "GET":
+        sep = "&" if "?" in url else "?"
+        url += f"{sep}_={int(time.time() * 1000)}"
     data = json.dumps(payload).encode() if payload is not None else None
     req = urllib.request.Request(url, data=data, method=method)
     req.add_header("Authorization", f"Bearer {os.environ['GH_TOKEN']}")
     req.add_header("Accept", "application/vnd.github+json")
     req.add_header("User-Agent", "push-via-api")
+    req.add_header("Cache-Control", "no-cache")
     if data:
         req.add_header("Content-Type", "application/json")
     try:
