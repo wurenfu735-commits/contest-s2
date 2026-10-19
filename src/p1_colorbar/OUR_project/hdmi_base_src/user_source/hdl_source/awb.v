@@ -19,7 +19,8 @@ version:     :
 *****************************************************************/
 module awb  #(   
     parameter IMG_HEIGHT = 1080,
-    parameter IMG_WIDTH  = 1920
+    parameter IMG_WIDTH  = 1920,
+    parameter [19:0] GAIN_MAX = 20'h40000   // L2 dark gain clamp (Q16: 0x40000=4x), 2026-10-19, snow root cause
 ) 
 (
     input                   I_clk  ,
@@ -213,12 +214,13 @@ assign  rgb888_b_d0[0] = I_tdata_d0[0+:8];
             in_b_r1 <= 20'h10000;
         end
         else if(done[0])begin
-            if(|in_r_x1[47:20])
-                in_r_r1 <= 20'hfffff;
+            // L2 gain clamp (2026-10-19): dark gain > GAIN_MAX clamped, snow root cause
+            if(|in_r_x1[47:20] || in_r_x1[19:0] > GAIN_MAX)
+                in_r_r1 <= GAIN_MAX;
             else 
                 in_r_r1 <= in_r_x1[19:0];
-            if(|in_b_x1[47:20])
-                in_b_r1 <= 20'hfffff;
+            if(|in_b_x1[47:20] || in_b_x1[19:0] > GAIN_MAX)
+                in_b_r1 <= GAIN_MAX;
             else 
                 in_b_r1 <= in_b_x1[19:0];
         end
