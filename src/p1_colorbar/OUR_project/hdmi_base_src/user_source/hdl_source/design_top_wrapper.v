@@ -964,13 +964,21 @@ isp_top u_isp_top (
 `endif
 
     // ==================================================================
-    // B4 · OSD 叠加
-    //   ★ 2026-10-19 起：MIXER_LITE 已定义 → 上面的 mixer_lite 不做 OSD，
-    //     所以这里的 OSD_SELF_DEV 也由顶部自动定义，走 rtl/osd_overlay.v
-    //     （208x156 面板 + 146x94 品牌双色 Logo + 两行 5x7 文字）。
-    //   ⚠️ 不要单独定义 OSD_SELF_DEV 而不定义 MIXER_LITE —— B4 之后官方
-    //     u_hdmi_mixer 是无条件例化的，那样会变成"官方 Logo + 自研 OSD"双层叠加，
-    //     且资源反而涨到 ≈80.6%。开关只认顶部的 `define MIXER_LITE。
+    // B4 · OSD 叠加：两条路，二选一
+    //   默认（未定义 OSD_SELF_DEV）：用**官方实现**——上面 u_hdmi_mixer 内部
+    //     已自带 Logo(160x160) + "安路 CNT:" 文字叠加，此处直连即可。
+    //     依赖官方 anlogic_logo_rom.v / osd_char_lib.v（已加入工程）。
+    //   定义 OSD_SELF_DEV：切到自研 osd_overlay.v（hdmi_mixer 输出的像素域
+    //     再叠一层 208x156 面板 + Logo + 两行英文文字）。
+    //   两种实现的采样时钟域、信号时序、1 拍延迟关系均一致。
+    //
+    //   ★ 2026-10-19 补充（MIXER_LITE 基线，不改上面原文）：
+    //     顶部已 `define MIXER_LITE，所以上面例化的**不再是**官方 u_hdmi_mixer，
+    //     而是 mixer_lite（3 拍直通、不含任何 OSD）。因此这里必须走自研
+    //     osd_overlay.v —— OSD_SELF_DEV 已由顶部自动定义（208x156 面板 +
+    //     146x94 品牌双色 Logo + 两行 5x7 文字）。
+    //     ⚠️ 不要单独定义 OSD_SELF_DEV 而不定义 MIXER_LITE：那样会同时保留官方
+    //     u_hdmi_mixer 的 Logo 再叠一层自研 OSD，变成双 Logo 且资源涨到 ≈80.6%。
     // ==================================================================
 `ifdef OSD_SELF_DEV
     osd_overlay #(
