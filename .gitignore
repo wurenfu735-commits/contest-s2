@@ -57,11 +57,10 @@ hc_output/
 *.tdr
 *.ttf
 
-# ── 位流：默认不进 git（体积大、是"发布产物"），正式里程碑走 GitHub Releases ──
-# 例外：bitbank/ 下**要分发给队友的现行位流**入库，让 `git clone` 就能拿到，
-#       避免"队友手上没有位流、只能凭截图猜有没有重编"。每块约 1.79 MB。
+# ── 位流：不进 git（体积大、是"发布产物"），正式里程碑走 GitHub Releases ──
+# 2026-10-19 整理：移除原 `!src/p1_colorbar/bitbank/*.bit` 例外（与 README"位流走 Releases"矛盾）。
+#   现行位流在 GitHub Releases 上分发，队友 clone 后按 `bitbank/位流台账.md` 的 ★ 现行版本去 Releases 取。
 *.bit
-!src/p1_colorbar/bitbank/*.bit
 *.bin
 *.fs
 *.mcs
