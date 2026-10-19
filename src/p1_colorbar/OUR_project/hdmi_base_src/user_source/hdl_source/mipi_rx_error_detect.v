@@ -73,19 +73,7 @@ always@(posedge I_clk)begin
 		c_cnt <= c_cnt;
 end
     
-   cwc1 cwc_inst
- (
-     .probe0(I_frame_start),
-     .probe1(I_frame_end),
-     .probe2(I_data_valid),
-     .probe3(O_mipi_rx_error),
-     .probe4(S_line_cnt),
-     .probe5(S_col_cnt),
-     .probe6(S_data_valid_1d),
-     .probe7(S_line_end),
-     .probe8(h_cnt),
-     .probe9(c_cnt),
-     .clk(I_clk)
- );
+   // cwc1 探针已移除（2026-10-19）：工程未配 cwc1 IP，例化会 HDL-8007 black box；
+   // O_mipi_rx_error 检测逻辑（上方 always）不依赖探针。
     
 endmodule
