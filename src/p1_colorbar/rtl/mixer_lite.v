@@ -1,7 +1,7 @@
 // ============================================================================
 // mixer_lite.v  ——  轻量像素混合器（替代官方 hdmi_mixer 的"非 OSD"部分）
 //
-// 为什么需要它（2026-10-19 实测依据，见 docs/17 优化项 O1）：
+// 为什么需要它（2026-10-19 完整跑 syn+phy 实测）：
 //   官方 hdmi_mixer.v（909 行）内部无条件例化 anlogic_logo_rom（6,387 条 × 25bit 的
 //   组合 ROM），实测这一个位图就占 2,340 LUT / 2,325 slice / 1 DSP / 0.554ns Setup 余量
 //   —— 是全片的 10.96%。它把"最缺的 LUT 用来存位图，最富余的 ERAM 空着"。
@@ -12,10 +12,11 @@
 //     3) 把 OSD 叠上去                          （← 这一件交给 rtl/osd_overlay.v）
 //   本模块只做 1) 2)，第 3 件由 osd_overlay.v 完成（Logo 用 2bit/像素的品牌双色 ROM）。
 //
-// 合规性（docs/17 L2/L3）：
+// 合规性：
 //   * 不修改、不删除任何官方文件；官方 hdmi_mixer.v / anlogic_logo_rom.v 原样留在工程里
-//   * 本模块是 L3 自研，顶层"不再例化"官方 hdmi_mixer，属于顶层连线范围
+//   * 本模块是自研代码，顶层"不再例化"官方 hdmi_mixer，属于顶层连线范围
 //   * Logo 位图数据仍来自官方 anlogic_logo_rom.v 的同一份素材（重新量化为品牌两色）
+//   * 官方加密 IP（hdmi_1_4b_transmitter_core_wrapper.enc.v、mipi_dphy_rx/*.enc.*）未动
 //
 // 时序契约（必须与官方一致，否则 osd_overlay 的坐标会错）：
 //   官方 mixer 对 vs/hs/de/data 的输出延迟都是 3 个 I_clk（1d → 2d → 输出寄存器），

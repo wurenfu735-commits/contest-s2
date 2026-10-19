@@ -6,13 +6,16 @@
 // 置为已定义（当前）：走  rtl/mixer_lite.v + rtl/osd_overlay.v
 //     · 官方 hdmi_mixer 的 OSD 通路不参与综合（文件仍留在工程里，不删不改）
 //     · Logo 改用 2bit/像素品牌双色（深蓝 #1C2D4E + 安路红 #ED1C24）
-//     · 实测收益：slice 16,616 → 14,291 那一档（省 ≈1,995），详见 docs/17 O1
+//     · 实测收益：slice 16,616(78.32%) → 14,547(68.57%)，即 −2,069（−9.75 pt）；
+//       lut6 14,534 → 12,239；DSP 9 → 8；eram 60 不变；
+//       Setup +101 ps → +1,311 ps，Hold +20 ps，0 违例。
+//       （位流 bitbank/OUR_b5_mixerlite_logo2c.bit，md5 544d2fd2…）
 //
 // 注释掉：回到官方 hdmi_mixer（909 行，内含 25bit 位图 ROM）
 //     · 那一版 Logo 是 579 色全彩，但一块位图就吃掉 2,325 slice = 全片 10.96%
 //
 // 注意：**不要**再用 `OSD_SELF_DEV` 做开关 —— B4 之后 u_hdmi_mixer 是无条件例化的，
-//       单独定义它只会"再叠一层"，变成双 Logo 且资源反而涨到 ≈80.6%（docs/17 O1）。
+//       单独定义它只会"再叠一层"，变成双 Logo 且资源反而涨到 ≈80.6%。
 // ============================================================================
 `define MIXER_LITE
 `ifdef MIXER_LITE
@@ -966,8 +969,8 @@ isp_top u_isp_top (
     //     所以这里的 OSD_SELF_DEV 也由顶部自动定义，走 rtl/osd_overlay.v
     //     （208x156 面板 + 146x94 品牌双色 Logo + 两行 5x7 文字）。
     //   ⚠️ 不要单独定义 OSD_SELF_DEV 而不定义 MIXER_LITE —— B4 之后官方
-    //     u_hdmi_mixer 是无条件例化的，那样会变成"官方 Logo + 自研 OSD"双层叠加。
-    //     详见 docs/17 优化项 O1 的更正方框。
+    //     u_hdmi_mixer 是无条件例化的，那样会变成"官方 Logo + 自研 OSD"双层叠加，
+    //     且资源反而涨到 ≈80.6%。开关只认顶部的 `define MIXER_LITE。
     // ==================================================================
 `ifdef OSD_SELF_DEV
     osd_overlay #(
