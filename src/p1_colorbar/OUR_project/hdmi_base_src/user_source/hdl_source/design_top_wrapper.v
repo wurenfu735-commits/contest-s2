@@ -9,7 +9,7 @@ module design_top_wrapper (
     output wire       O_cam_24m,
     output wire       O_cam_rst,
       
-    inout wire [1:0]  I_button,
+    input wire [3:0]  I_button,   // 板载 KEY1~4，按下低电平（复用做模式/灵敏度切换）
 
     output wire       O_screen_pwm,
     output wire       O_tmds_ch0_p,
@@ -99,6 +99,12 @@ module design_top_wrapper (
     wire        S_hdmi_serial_clk;
     wire        S_hdmi_rst_n;
     wire        S_video_out_rst_n;
+
+    // 按键模式：模式/灵敏度寄存器（hdmi 域）与跨域帧锁存后的值（csi 域）
+    wire [2:0]  S_mode_hdmi;
+    wire [1:0]  S_k_hdmi;
+    wire [2:0]  S_mode_csi;
+    wire [1:0]  S_k_csi;
 
 
     wire        S_vi_128b_frame_start;
@@ -554,13 +560,37 @@ module design_top_wrapper (
   ae_set u_ae_set (
       .I_clk(S_24m_clk),
       .I_rst(~S_rst_n),
-      .I_btn({I_button,2'b11}),
+      .I_btn(4'b1111),   // 按键已改用于模式/灵敏度切换，官方 idelay 调校功能固定为"无按键"
       .I_cam_cfg_done(S_cam_cfg_done),
       .I_ae_cfg_done(S_ae_cfg_done),
       .O_ae_req(S_ae_req),
       .O_ae(S_ae),
       .O_ag(S_ag)
   );
+
+    // ==================================================================
+    // 按键模式切换：KEY1 切模式(0..4) / KEY2 切灵敏度 / KEY3,4 复位到默认
+    //   mode_ctl      在 hdmi 像素域（74.25MHz，PLL 派生、稳定）消抖 + 维护寄存器
+    //   cdc_mode_sync 独热码跨域到 csi 域 + 帧起始锁存（防撕裂，对应进阶①切换平稳）
+    // ==================================================================
+    mode_ctl u_mode_ctl (
+        .I_clk   ( S_hdmi_pixel_clk ),
+        .I_rst_n ( S_hdmi_rst_n     ),
+        .I_btn   ( I_button         ),
+        .O_mode  ( S_mode_hdmi      ),
+        .O_k     ( S_k_hdmi         )
+    );
+
+    cdc_mode_sync u_cdc_mode_sync (
+        .I_clk_hdmi    ( S_hdmi_pixel_clk ),
+        .I_clk_csi     ( S_csi_rx_clk     ),
+        .I_rst_n       ( S_rst_n          ),
+        .I_mode        ( S_mode_hdmi      ),
+        .I_k           ( S_k_hdmi         ),
+        .I_frame_start ( S_raw_tuser      ),
+        .O_mode        ( S_mode_csi       ),
+        .O_k           ( S_k_csi          )
+    );
   
     uicfgcs520 #(
       .CLK_DIV(23809524 / 100000 - 1)
@@ -717,8 +747,8 @@ isp_top u_isp_top (
 .O_tlast         (S_ISP_O_tlast ),
 .O_tuser         (S_ISP_O_tuser ),
 .O_tvalid        (S_ISP_O_tvalid),
-.I_mode          (2'd2          ),   // 回到"我们的判决"（二分实验结束，通路已确认正常）
-.I_k             (2'd2          ),   // 灵敏度档 2（与仿真/黄金模型验证一致）
+.I_mode          (S_mode_csi     ),   // 按键切模式：0原图/1官方/2我们/3分屏/4边缘叠加（帧锁存，防撕裂）
+.I_k             (S_k_csi        ),   // 按键切灵敏度档 0..3（帧锁存）
 .I_tready        ()
   );
 

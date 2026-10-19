@@ -93,7 +93,7 @@ module edge_adaptive_96 #(
 )(
     input  wire        I_clk,
     input  wire        I_rst_n,
-    input  wire [1:0]  I_mode,       // 1=官方判决 2=我们的判决 3=左右分屏（0=原图在 isp_top 层做）
+    input  wire [2:0]  I_mode,       // 0=原图(isp_top层做) 1=官方判决 2=我们 3=左右分屏（4=边缘叠加在 edge_overlay 层做）
     input  wire [1:0]  I_k,          // 亮度灵敏度档 0..3
     input  wire        I_tlast,
     input  wire        I_tuser,
@@ -103,6 +103,7 @@ module edge_adaptive_96 #(
     output reg         O_tlast,
     output reg         O_tuser,
     output reg  [95:0] O_tdata,
+    output reg  [31:0] O_mag,        // 4 像素梯度灰阶（8bit/像素，带自适应阈值抑制），供 edge_overlay 做边缘叠加
     output reg         O_tvalid,
     input  wire        O_tready
 );
@@ -360,7 +361,7 @@ module edge_adaptive_96 #(
 
     assign S_edge_out_w = {e3, e2, e1, e0};
 
-    // ---------------- 8) 四态输出 ----------------
+    // ---------------- 8) 五态输出 ----------------
     reg [10:0] out_col;
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n)                     out_col <= 11'd0;
@@ -370,10 +371,19 @@ module edge_adaptive_96 #(
     (* keep = "true" *) wire [3:0] off_bits = { (mag3 >= OFFICIAL_THR), (mag2 >= OFFICIAL_THR),
                                                (mag1 >= OFFICIAL_THR), (mag0 >= OFFICIAL_THR) };
 
-    (* keep = "true" *) wire split_left = (out_col < (IMG_WIDTH / 2));
-    (* keep = "true" *) wire [3:0] pick = (I_mode == 2'd3) ? (split_left ? off_bits : S_edge_out_w) :
-                                          (I_mode == 2'd1) ? off_bits : S_edge_out_w;
+    // 梯度灰阶（8bit/像素，带自适应阈值抑制）：强边 mag 大→255（亮），弱边接近 thr（暗），低于阈值置 0
+    // 供 edge_overlay 做 mode 4 边缘叠加用（用户选：梯度幅值显示，强边更亮）
+    (* keep = "true" *) wire [7:0] mag_g0 = (mag0 >= thr0) ? ((mag0 > 16'd255) ? 8'd255 : mag0[7:0]) : 8'd0;
+    (* keep = "true" *) wire [7:0] mag_g1 = (mag1 >= thr1) ? ((mag1 > 16'd255) ? 8'd255 : mag1[7:0]) : 8'd0;
+    (* keep = "true" *) wire [7:0] mag_g2 = (mag2 >= thr2) ? ((mag2 > 16'd255) ? 8'd255 : mag2[7:0]) : 8'd0;
+    (* keep = "true" *) wire [7:0] mag_g3 = (mag3 >= thr3) ? ((mag3 > 16'd255) ? 8'd255 : mag3[7:0]) : 8'd0;
 
+    (* keep = "true" *) wire split_left = (out_col < (IMG_WIDTH / 2));
+    // 四态判决（mode 4 的边缘叠加移到 edge_overlay 层做，本模块只输出二值图 + 梯度灰阶）
+    (* keep = "true" *) wire [3:0] pick = (I_mode == 3'd3) ? (split_left ? off_bits : S_edge_out_w) :
+                                          (I_mode == 3'd1) ? off_bits : S_edge_out_w;
+
+    // 二值边缘图（黑底白线，与官方对照）
     wire [23:0] p0_out = pick[0] ? 24'hFFFFFF : 24'h000000;
     wire [23:0] p1_out = pick[1] ? 24'hFFFFFF : 24'h000000;
     wire [23:0] p2_out = pick[2] ? 24'hFFFFFF : 24'h000000;
@@ -396,11 +406,13 @@ module edge_adaptive_96 #(
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n) begin
             O_tdata  <= 96'd0;
+            O_mag    <= 32'd0;
             O_tvalid <= 1'b0;
             O_tlast  <= 1'b0;
             O_tuser  <= 1'b0;
         end else begin
             O_tdata  <= {p0_out, p1_out, p2_out, p3_out};
+            O_mag    <= {mag_g3, mag_g2, mag_g1, mag_g0};
             O_tvalid <= vld_d[TOTAL_DLY-1];
             O_tlast  <= lst_d[TOTAL_DLY-1];
             O_tuser  <= usr_d[TOTAL_DLY-1];

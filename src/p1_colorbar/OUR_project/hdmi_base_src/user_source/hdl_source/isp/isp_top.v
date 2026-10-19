@@ -7,7 +7,7 @@ module isp_top (
     input 			I_tvalid		,
     input [9:0] 	I_tdest			,
     input 			O_tready		,
-    input [1:0] 	I_mode			,   // 边缘判决四态：0原图 1官方 2我们 3左右分屏
+    input [2:0] 	I_mode			,   // 0原图 1官方判决 2我们 3左右分屏 4边缘叠加原图
     input [1:0] 	I_k				,   // 自适应阈值灵敏度档 0..3
     output [127:0] 	O_tdata			,
     output 			O_tlast			,
@@ -39,8 +39,15 @@ wire         m_aixs_tvalid;  //synthesis keep
   wire         edge_O_tlast;  //synthesis keep
   wire         edge_O_tuser;  //synthesis keep
   wire [ 95:0] edge_O_tdata;  //synthesis keep
+  wire [ 31:0] edge_O_mag;    //synthesis keep  梯度灰阶（供边缘叠加）
   wire         edge_O_tvalid; //synthesis keep
   wire         edge_O_tready; //synthesis keep
+
+  // ===== 自研：边缘叠加（独立模块，原图延迟链是数据通路，不会被优化）=====
+  wire [ 95:0] overlay_O_tdata;
+  wire         overlay_O_tvalid;
+  wire         overlay_O_tlast;
+  wire         overlay_O_tuser;
 
   assign awb_O_tready = edge_O_tready;
   assign edge_O_tready = O_tready;
@@ -110,7 +117,7 @@ awb #(
   ) u_edge_adaptive_96 (
       .I_clk   (axi4s_video_aclk),
       .I_rst_n (I_rst_n),
-      .I_mode  (I_mode),     // 四态（顶层传入，当前先接固定值）
+      .I_mode  (I_mode),     // 五态（顶层按键驱动，经 cdc_mode_sync 帧锁存后传入）
       .I_k     (I_k),        // 灵敏度档
       .I_tlast (awb_O_tlast),
       .I_tuser (awb_O_tuser),
@@ -120,15 +127,35 @@ awb #(
       .O_tlast (edge_O_tlast),
       .O_tuser (edge_O_tuser),
       .O_tdata (edge_O_tdata),
+      .O_mag   (edge_O_mag),
       .O_tvalid(edge_O_tvalid),
       .O_tready(edge_O_tready)
   );
 
-    // 态 0（原图直通）用 awb 的原始 96bit；态 1/2/3（官方/我们/分屏）用算法输出。
-  // 算法模块在态 0 时仍在跑，只是输出不被选用；切换瞬间两者相位差 3 拍，几毫秒，可接受。
-  wire         S_disp_tuser  = (I_mode == 2'd0) ? awb_O_tuser : edge_O_tuser;  //synthesis keep
-  wire         S_disp_tvalid = (I_mode == 2'd0) ? awb_O_tvalid: edge_O_tvalid; //synthesis keep
-  wire [ 95:0] S_disp_tdata  = (I_mode == 2'd0) ? awb_O_tdata : edge_O_tdata;  //synthesis keep
+  // 边缘叠加（独立模块）：原图 + 边缘二值图/梯度灰阶 → 叠加图
+  //   mode 4：梯度灰阶叠加原图（强边亮/弱边暗/非边原图）；其他：二值图透传
+  edge_overlay u_edge_overlay (
+      .I_clk         (axi4s_video_aclk),
+      .I_rst_n       (I_rst_n),
+      .I_orig        (awb_O_tdata),
+      .I_orig_valid  (awb_O_tvalid),
+      .I_edge        (edge_O_tdata),
+      .I_mag         (edge_O_mag),
+      .I_mode        (I_mode),
+      .I_edge_valid  (edge_O_tvalid),
+      .I_edge_last   (edge_O_tlast),
+      .I_edge_user   (edge_O_tuser),
+      .O_data        (overlay_O_tdata),
+      .O_valid       (overlay_O_tvalid),
+      .O_last        (overlay_O_tlast),
+      .O_user        (overlay_O_tuser)
+  );
+
+    // 态 0（原图直通）用 awb 原始 96bit；态 1/2/3/4 用 edge_overlay 输出（mode 4 边缘叠加，其他二值图）。
+  // 切换瞬间两者相位差几拍，可接受（帧锁存兜底，防撕裂）。
+  wire         S_disp_tuser  = (I_mode == 3'd0) ? awb_O_tuser : overlay_O_tuser;  //synthesis keep
+  wire         S_disp_tvalid = (I_mode == 3'd0) ? awb_O_tvalid: overlay_O_tvalid; //synthesis keep
+  wire [ 95:0] S_disp_tdata  = (I_mode == 3'd0) ? awb_O_tdata : overlay_O_tdata;  //synthesis keep
 
     data_96bit_to_128bit u_data_96bit_to_128bit(
         .I_clk              ( axi4s_video_aclk  ),
