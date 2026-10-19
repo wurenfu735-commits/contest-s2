@@ -56,9 +56,11 @@ hc_output/
 *.tdr
 *.ttf
 
-# ── 位流：体积大且是"发布产物"，请走 GitHub Releases，不要塞进 git ──────
-# （bitbank/ 里的版本靠文件名区分，用 Release 附件 + tag 更合适）
+# ── 位流：默认不进 git（体积大、是"发布产物"），正式里程碑走 GitHub Releases ──
+# 例外：bitbank/ 下**要分发给队友的现行位流**入库，让 `git clone` 就能拿到，
+#       避免"队友手上没有位流、只能凭截图猜有没有重编"。每块约 1.79 MB。
 *.bit
+!src/p1_colorbar/bitbank/*.bit
 *.bin
 *.fs
 *.mcs
