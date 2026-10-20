@@ -121,7 +121,7 @@ awb #(
     end
   end
   image_modes4 u_image_modes4 (
-    .I_clk(axi4s_video_aclk),.I_rst_n(I_rst_n),.I_mode(I_mode),
+    .I_clk(axi4s_video_aclk),.I_rst_n(I_rst_n),.I_mode(I_mode),.I_k(I_k),
     .I_tlast(process_eol),.I_tuser(process_sof),.I_tdata(awb_O_tdata),
     .I_tvalid(awb_O_tvalid),.I_tready(awb_O_tready),.O_tready(edge_O_tready),
     .O_tlast(edge_O_tlast),.O_tuser(edge_O_tuser),
