@@ -124,22 +124,11 @@ module design_top_wrapper (
     wire        S_hdmi_rst_n;
     wire        S_video_out_rst_n;
 
-    // 按键模式：模式/灵敏度寄存器（hdmi 域）与跨域帧锁存后的值（csi 域）
-    wire [2:0]  S_mode_hdmi;
-    wire [1:0]  S_k_hdmi;
-    wire [2:0]  S_mode_csi;
-    wire [1:0]  S_k_csi;
-
+    // 2026-10-21 极简基线：模式/灵敏度/perf 信号已随模块一起剔除，不再声明
 
     wire        S_vi_128b_frame_start;
     wire        S_vi_128b_valid;      
     wire[127:0] S_vi_128b_data;
-    // ---- perf_counter + mipi_rx_error 接通（2026-10-19）----
-    wire        S_mipi_rx_error;                         // mipi_rx_error_detect 输出（csi_rx_clk 域）
-    (* keep = "true" *) wire [31:0] S_perf_frame_cnt;    // 总帧数（T3 接 osd_overlay）
-    (* keep = "true" *) wire [7:0]  S_perf_fps;          // 每秒帧数（T3 接 osd_overlay）
-    (* keep = "true" *) wire [15:0] S_perf_err_cnt;      // MIPI 错误累计（T3 接 osd_overlay）
-    (* keep = "true" *) wire        S_perf_err_flag;     // 错误发生过（T3 接 LED/OSD）    
     
     wire        S_video_out_rd_busy;
     wire        S_video_in_wr_busy; 
@@ -599,28 +588,10 @@ module design_top_wrapper (
   );
 
     // ==================================================================
-    // 按键模式切换：KEY1 切模式(0/2/3/4/5，跳过 1) / KEY2 切灵敏度 / KEY3,4 复位到默认
-    //   mode_ctl      在 hdmi 像素域（74.25MHz，PLL 派生、稳定）消抖 + 维护寄存器
-    //   cdc_mode_sync 独热码跨域到 csi 域 + 帧起始锁存（防撕裂，对应进阶①切换平稳）
+    // 2026-10-21 极简基线：已剔除按键模式切换
+    //   mode_ctl / cdc_mode_sync 不再例化（I_button 端口保留但未使用，
+    //   pin.adc 约束不变；恢复多模式从 git 历史取回本段即可）
     // ==================================================================
-    mode_ctl u_mode_ctl (
-        .I_clk   ( S_hdmi_pixel_clk ),
-        .I_rst_n ( S_hdmi_rst_n     ),
-        .I_btn   ( I_button         ),
-        .O_mode  ( S_mode_hdmi      ),
-        .O_k     ( S_k_hdmi         )
-    );
-
-    cdc_mode_sync u_cdc_mode_sync (
-        .I_clk_hdmi    ( S_hdmi_pixel_clk ),
-        .I_clk_csi     ( S_csi_rx_clk     ),
-        .I_rst_n       ( S_rst_n          ),
-        .I_mode        ( S_mode_hdmi      ),
-        .I_k           ( S_k_hdmi         ),
-        .I_frame_start ( S_raw_tuser      ),
-        .O_mode        ( S_mode_csi       ),
-        .O_k           ( S_k_csi          )
-    );
   
     uicfgcs520 #(
       .CLK_DIV(23809524 / 100000 - 1)
@@ -777,8 +748,6 @@ isp_top u_isp_top (
 .O_tlast         (S_ISP_O_tlast ),
 .O_tuser         (S_ISP_O_tuser ),
 .O_tvalid        (S_ISP_O_tvalid),
-.I_mode          (S_mode_csi     ),   // 按键切模式：0原图/2我们边缘/3分屏(原图|卡通)/4卡通化/5形态学梯度（帧锁存，防撕裂）
-.I_k             (S_k_csi        ),   // 按键切灵敏度档 0..3（帧锁存）
 .I_tready        ()
   );
 
@@ -790,7 +759,7 @@ isp_top u_isp_top (
         .I_camera_frame_start ( S_ISP_O_tuser  ),
         .I_camera_valid       ( S_ISP_O_tvalid ),
         .I_camera_data        ( S_ISP_O_tdata  ),
-        .I_mipi_rx_error      ( S_mipi_rx_error			      ),
+        .I_mipi_rx_error      ( 1'b0			      ),
 
         .I_ddr_clk            ( S_ddr_clk             ),
 		.I_display_pause      ( 1'b0                  ),
@@ -1040,35 +1009,9 @@ isp_top u_isp_top (
         .O_tmds_clk_p       ( O_tmds_clk_p      )
     );
 
-    
-
     // ============================================================================
-    // mipi_rx_error_detect（2026-10-19 接通）：csi 帧完整性检测
-    //   输出 S_mipi_rx_error 同时给 video_in（坏帧覆盖）和 perf_counter（累计）
-    //   修复原 I_mipi_rx_error 硬接 1'b0 的"假健康"缺陷
+    // 2026-10-21 极简基线：已剔除 mipi_rx_error_detect 与 perf_counter
+    //   video_in.I_mipi_rx_error 回到官方接法 1'b0；恢复时从 git 历史取回本段
     // ============================================================================
-    mipi_rx_error_detect u_mipi_rx_err (
-        .I_clk           ( S_csi_rx_clk       ),
-        .I_rst_n         ( S_rst_n            ),
-        .I_frame_start   ( S_csi_frame_start  ),
-        .I_frame_end     ( S_csi_frame_end    ),
-        .I_data_valid    ( S_csi_valid        ),
-        .O_mipi_rx_error ( S_mipi_rx_error    )
-    );
-
-    // ============================================================================
-    // perf_counter（2026-10-19）：运行时计数器
-    //   帧率/总帧/MIPI 错误累计；输出 keep 防 LED 悬空优化，T3 接 osd_overlay 上屏
-    // ============================================================================
-    perf_counter #(.CLK_HZ(74_250_000)) u_perf_counter (
-        .I_clk           ( S_hdmi_pixel_clk   ),
-        .I_rst_n         ( S_rst_n            ),
-        .I_vsync         ( S_hdmi_vsync       ),
-        .I_mipi_rx_error ( S_mipi_rx_error    ),
-        .O_frame_cnt     ( S_perf_frame_cnt   ),
-        .O_fps           ( S_perf_fps         ),
-        .O_err_cnt       ( S_perf_err_cnt     ),
-        .O_err_flag      ( S_perf_err_flag    )
-    );
 
 endmodule
