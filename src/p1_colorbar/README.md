@@ -75,4 +75,4 @@
 | `E:\fpga\contest_s2\docs\`        | 13 份文档（00 阅读指南 → 12 阶段总结，赛题解读 / 算法规格 v4 / 复用与自研清单 …）+ `research\`（开源调研、过程保障） |
 | `E:\fpga\contest_s2\memory\`      | `MEMORY.md`（41 条坑）、`PROGRESS.md`（阶段进展）                  |
 | `E:\fpga\contest_s2\sim\golden\`  | v2/v3 时代黄金模型与验证脚本（**留档**；现行黄金模型 = `..\..\tools\gen_golden_v4.py`） |
-| `E:\fpga\HX1P35A_Contest_202606\` | **官方资料包（只读）**                                           |
+| `E:\官方材料\05_官方例程\` | **官方资料包（只读）**                                           |

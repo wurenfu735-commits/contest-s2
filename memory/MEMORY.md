@@ -2,7 +2,7 @@
 
 > 本目录是「错误与关键点」记忆，独立于官方资料包。
 > 历史记忆快照（workbuddy 时代，已读取并继承）在：
-> `E:\fpga\HX1P35A_Contest_202606\.workbuddy\memory\`
+> `E:\官方材料\_历史记忆\workbuddy\memory\`
 > ⚠️ 其中关于 **SC500** 的一切结论，已被下方 **SC520 纠错** 取代。
 
 ## 〇、铁律：任何"上传到 GitHub / 发给别人"之前，必须先跑核对
@@ -66,7 +66,7 @@ python tools/verify_remote.py --branch main --deep     # 退出码 0 = 一致，
 ## 四、文件布局（E 盘，新）
 
 - 项目根（我们的产物）：`E:\fpga\contest_s2\`（docs / src / sim / assets / delivery / memory）
-- 官方资料（只读不动）：`E:\fpga\HX1P35A_Contest_202606\`
+- 官方资料（只读不动）：`E:\官方材料\`（完整官方材料库：赛题指导/硬件环境/工具链/技术文档/官方例程/学习资料）
 - 历史文档快照（不迁移，仅参考）：`E:\workbuddy\fpga\`
 - 自建 TD 工程历史：`E:\fpga\anlu_project\`
 - **P1 自研 TD 工程（2026-10-14 已改名，与官方彻底区分）**：
@@ -74,7 +74,7 @@ python tools/verify_remote.py --branch main --deep     # 退出码 0 = 一致，
   （外层 `OUR_project` / 内层 `hdmi_base_src` / 工程名及 Runs、sdc 均为 `OUR_p1_colorbar*`；原 `hdmi_base\lab_ex1_mipi_hdmi` + `camera_to_dsi_display.*` 已不存在）
   - 顶层 = `colorbar_top`；自研 rtl 在 `src\p1_colorbar\rtl\`（工程内相对路径 `../../../rtl/`）；约束 `../../../constraints/colorbar_top.adc`
   - 改名前的 `.al`/`.sdc` 备份在 `D:\dsh-home\tmp\rename_backup\`；改名脚本留档 `src\p1_colorbar\archive\oneoff_scripts\rename_project.ps1`
-  - 官方原包（`HX1P35A_Contest_202606\...\lab_ex1_mipi_hdmi`）保持只读，仍是官方基线
+  - 官方原包（`E:\官方材料\05_官方例程\7_lab_ex_2026_nosoft\...\lab_ex1_mipi_hdmi`）保持只读，仍是官方基线
 - **文档地图（2026-10-14 建立，2026-10-16 更新，★2026-10-19 收敛重构）**：**总索引 = 根目录 `README.md`**；活文档只有 8 份 = `README.md` · `需求文档.md` · `docs\PLAN.md`（路线/排期/验收）· `docs\操作手册.md`（编译烧写上板排错）· `docs\算法规格.md`（v5 规格+选型）· `docs\答辩与合规.md`（自研边界/合规/稳定性）· `docs\阶段提示词.md`（AI 执行单元）· `docs\01_赛题解读.md`；**旧 25 份编号文档一律移入 `docs\archive\`（只留痕不照用）**，映射见 `docs\archive\README.md`。原始备份 = `contest_s2\_backup_docs_20261014_2230\`
 - **src 目录规约（2026-10-14 建立，2026-10-16 重构）**：**`src\p1_colorbar\README.md` = 工程文件地图（唯一权威）**，含 30 秒速览 / 目录职责 / 最新版本判断依据 / 可随时删清单 / 旧版本三步处理；`bitbank\` 只留里程碑 bit，**现行版本看 `bitbank\位流台账.md` 的「★ 现行版本」行**（不看文件名）；tb 分 `unit\`（模块级）/ `integration\`（集成级）/ `gen\`（脚本自动生成，可删）三类，对照表在 `tb\README.md`
 
