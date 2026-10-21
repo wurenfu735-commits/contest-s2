@@ -1,0 +1,128 @@
+# ── 仿真/综合产物体积告警 ───────────────────────────────────────────────
+# 这个工程总计约 27.7 GB，但真正该进版本库的源码只有约 9 MB。
+# 下面第一条规则挡掉的 vsim.wlf 单文件就有 26.7 GB。
+# 千万别为了"图省事"删掉这些规则：仓库会瞬间膨胀到几十 GB，且 push 必然失败。
+
+# ── 仿真产物 ─────────────────────────────────────────────────────────
+*.wlf
+wlft*
+vsim.wlf
+transcript
+vsim_stacktrace.vstf
+*.vcd
+*.fsdb
+*.shm
+*.sav
+*.jou
+*.ucdb
+*.cov
+*.vstf
+work/
+work*/
+__pycache__/
+*.pyc
+# sim/tb96/ 是 run_tb_96.ps1 每次运行的中间产物（par_out/seq_out/golden_out.txt 等，
+# 随 RTL 改动而变），随时可由 tb 重新生成，不进库。
+sim/tb96/
+
+# ── 综合 / 布局布线产物（Tang Dynasty、Quartus 等）─────────────────────
+db/
+incremental_db/
+output_files/
+simulation/
+*_Runs/
+*.runs/
+greybox_tmp/
+hc_output/
+*.qdb
+*.qtl
+*.qpg
+*.qor
+*.area
+*.timing
+*.timingsummary
+*.ipc
+*.ts
+*.status
+*.cfg
+*.pin
+*.done
+*.sof
+*.pof
+*.rbf
+*.jic
+*.pld
+*.sld
+*.tdf
+*.tdr
+*.ttf
+
+# ── 位流：默认不进 git（体积大、是"发布产物"）──
+# 2026-10-21 重构：保留 bitbank/ 现行位流入库（队友 clone 即可核对版本，避免"以为传上去了"）。
+*.bit
+!src/p1_colorbar/bitbank/*.bit
+*.bin
+*.fs
+*.mcs
+*.prm
+
+# ── 日志 ────────────────────────────────────────────────────────────
+*.log
+*.logw
+*.rpt
+*.summary
+*_summary.txt
+
+# ── 编辑器 / 系统 ────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+*.bak
+*.tmp
+*.swp
+*~
+
+# ── 第三方与参考资料：不随本仓库分发 ────────────────────────────────
+# assets/ref_docs/guoyi_repo* 是他人开源作品（外部 2025 国一仓库）的副本，
+# 有独立来源与许可，重分发既不合规也没必要 —— 需要的人按 docs/05_开源调研.md
+# 里的 GitHub 地址自行获取。
+assets/ref_docs/guoyi_repo/
+assets/ref_docs/guoyi_repo.zip
+# 参考视频与音频（十余 MB 起），需要的人自行获取
+assets/ref_videos/
+assets/video_frames/
+assets/video_frames_v2/
+
+# ── 临时 ────────────────────────────────────────────────────────────
+*.tmp
+.idea/
+.vscode/
+
+# ── TD（Tang Dynasty）本地锁文件 ────────────────────────────────────
+# td_project/.lock.f 是 TD 每次启动写的"上次用户/进程"记录（用户名 + PID + 工程绝对路径），
+# 本机状态，随机器和运行变化，进库只会制造无意义 diff。
+*.lock.f
+
+# ── 例外：divider 的 IP 配置必须入库 ──────────────────────────────────
+# 上面 `*.ipc` 会连 divider.ipc 一起挡掉，但它是 awb.v 例化 divider 的必需配置。
+# 少了它，divider 变 black box，综合直接 HDL-8007 ERROR（2026-10-17 实测踩过）。
+!**/ip_source/divider/divider.ipc
+!**/awb/divider/divider.ipc
+
+# ── 黄金模型输出：59 MB 的逐像素 txt，可随时重算 ──────────────────────
+# 由 sim/golden/edge_adaptive.py 生成、sim/golden/verify_all.ps1 复算，
+# 脚本都在库里。进库只会让 clone 多等几分钟，没有任何信息增量。
+sim/golden/out/
+
+# ── 官方文档提取图：33 MB，从参考 PDF 里抽出来的图，非本项目产出 ────────
+# 需要的人直接看原 PDF（docs/04_官方例程清单.md 里有出处）。
+assets/ref_docs/extracted/
+
+# ── 手工备份文件：旧版本在 git 历史里能翻，不必占工作区 ──────────────────
+# 例：hdmi_mixer.v.bak_before_official_osd
+*.bak_*
+
+# ── 第三方开源源码原文：两个来源仓库均无 License（= 保留所有权利），
+#    入库即再分发 → 只留链接与分析，不存原文（docs/research/R3_参考源码/README.md）──
+docs/research/R3_参考源码/*.sv
+docs/research/R3_参考源码/*.v
